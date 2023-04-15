@@ -1,16 +1,22 @@
 # Bunnify (experimental stage)
 
-Bunnify is a library for publishing and consuming events with AMQP. It presents the following features:
+Bunnify is a library for publishing and consuming events for AMQP. It presents the following features:
 
-- Easy setup.
-- Consume the same Payload you published, marshal and unmarshal actions are handled by the library and abstracted to the developer.
-- Reconnection handled by default.
-- Correlation ID and other event metadata is handled by default.
-- Does not add extra dependencies more than `github.com/rabbitmq/amqp091-go` on which all the libraries are built upon.
+**Easy setup:** Bunnify is designed to be easy to set up and use. Simply install the library and start publishing and consuming events.
+
+**Automatic payload marshaling and unmarshaling:** You can consume the same payload you published, without worrying about the details of marshaling and unmarshaling. Bunnify handles these actions for you, abstracting them away from the developer.
+
+**Automatic reconnection:** If your connection to the AMQP server is interrupted, Bunnify will automatically handle the reconnection for you. This ensures that your events are published and consumed without interruption.
+
+**Built-in event metadata handling:** The library automatically handles event metadata, including correlation IDs and other important details.
+
+**Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`, which means that it doesn't add any unnecessary dependencies to your project.
 
 ## Experimental
 
-This library is on an early stage which means the API may change substantially in the next few weeks. Beware before using this in a real work environment.
+Important Note: Bunnify is currently in an early stage of development. This means that the API may change substantially in the coming weeks.
+
+I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
 
 ## Motivation
 
@@ -18,7 +24,7 @@ Every workplace I have been had their own AMQP library. Most of the time the pro
 
 Some developers are often spoiled with these as they provide a good dev experience and that is great; but you cannot use it in side projects, or if you start your own company.
 
-Then, it is clear for me that there is a need for a library that is simple to use, to understand and that provides most of the mentioned functionalities out of the box.
+Bunnify aims to provide a flexible and adaptable solution that can be used in a variety of environments and scenarios. By abstracting away many of the technical details of AMQP publishing and consumption, Bunnify makes it easy to get started with event-driven architecture without needing to be an AMQP expert.
 
 ## Example
 
