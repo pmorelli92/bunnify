@@ -37,8 +37,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"time"
-    "fmt"
 
 	"github.com/pmorelli92/bunnify/bunnify"
 )
@@ -89,8 +90,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
-    "fmt"
 
 	"github.com/pmorelli92/bunnify/bunnify"
 )
@@ -99,7 +100,7 @@ func main() {
 	c := bunnify.NewConnection()
 	c.Start()
 
-    publisher := c.NewPublisher()
+	publisher := c.NewPublisher()
 
 	event := bunnify.PublishableEvent{
 		Metadata: bunnify.Metadata{
@@ -108,11 +109,11 @@ func main() {
 			Timestamp:     time.Now(),
 		},
 		Payload: catCreated{
-            Years: 22
-        },
+			Years: 22,
+		},
 	}
 
-    if err := publisher.Publish(context.TODO(), "exchange1", "catCreated", publishedEvent); err != nil {
+	if err := publisher.Publish(context.TODO(), "exchange1", "catCreated", event); err != nil {
 		fmt.Println(err)
 	}
 }
