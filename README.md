@@ -77,7 +77,7 @@ func HandleCatCreated(ctx context.Context, event bunnify.ConsumableEvent[catCrea
 	fmt.Println("Event ID: " + event.ID)
 	fmt.Println("Correlation ID: " + event.CorrelationID)
 	fmt.Println("Timestamp: " + event.Timestamp.Format(time.DateTime))
-	fmt.Println("Cat created with years: " + event.Payload.Years)
+	fmt.Println("Cat created with years: " + fmt.Sprint(event.Payload.Years))
 	return nil
 }
 ```
