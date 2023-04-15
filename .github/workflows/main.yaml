@@ -1,0 +1,24 @@
+name: Tests
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  docker:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3.3.0
+
+    - name: Start RabbitMQ
+      run: docker compose -f tests/docker-compose.yaml up -d
+
+    - name: Tests
+      run: go test ./...
