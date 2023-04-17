@@ -11,8 +11,8 @@ import (
 
 func TestConsumerPublisher(t *testing.T) {
 	// Setup
-	queueName := fmt.Sprintf("queue-%d", time.Now().Unix())
-	exchangeName := fmt.Sprintf("exchange-%d", time.Now().Unix())
+	queueName := fmt.Sprintf("t1-queue-%d", time.Now().Unix())
+	exchangeName := fmt.Sprintf("t1-exchange-%d", time.Now().Unix())
 	routingKey := "order.orderCreated"
 
 	type orderCreated struct {

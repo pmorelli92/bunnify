@@ -12,9 +12,9 @@ import (
 
 func TestDeadLetterReceivesEvent(t *testing.T) {
 	// Setup
-	queueName := fmt.Sprintf("queue-%d", time.Now().Unix())
-	deadLetterQueueName := fmt.Sprintf("dead-%d", time.Now().Unix())
-	exchangeName := fmt.Sprintf("exchange-%d", time.Now().Unix())
+	queueName := fmt.Sprintf("t2-queue-%d", time.Now().Unix())
+	deadLetterQueueName := fmt.Sprintf("t2-dead-%d", time.Now().Unix())
+	exchangeName := fmt.Sprintf("t2-exchange-%d", time.Now().Unix())
 	routingKey := "order.orderCreated"
 
 	type orderCreated struct {
