@@ -25,7 +25,7 @@ func WithReconnectInterval(interval time.Duration) func(*connectionOption) {
 	}
 }
 
-func WithLogger(logger Logger) func(*connectionOption) {
+func WithConnectionLogger(logger Logger) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.logger = logger
 	}
@@ -87,7 +87,7 @@ func (c *Connection) Close() error {
 	return nil
 }
 
-func (c *Connection) newChannel() (*amqp.Channel, bool) {
+func (c *Connection) getNewChannel() (*amqp.Channel, bool) {
 	if c.connectionClosedBySystem {
 		c.options.logger.Info(connectionClosedBySystem)
 		return nil, true
