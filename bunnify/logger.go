@@ -40,3 +40,16 @@ func (dl DefaultLogger) Info(message string) {
 func (dl DefaultLogger) Error(message string) {
 	dl.logger.Error(message)
 }
+
+type SilentLogger struct {
+}
+
+func NewSilentLogger() SilentLogger {
+	return SilentLogger{}
+}
+
+func (sl SilentLogger) Info(message string) {
+}
+
+func (sl SilentLogger) Error(message string) {
+}

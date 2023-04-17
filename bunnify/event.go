@@ -12,10 +12,18 @@ type Metadata struct {
 	Timestamp     time.Time `json:"timestamp"`
 }
 
+// DeliveryInfo holds information of original queue, exchange and routing keys
+type DeliveryInfo struct {
+	Queue      string
+	Exchange   string
+	RoutingKey string
+}
+
 // ConsumableEvent[T] represents an event that can be consumed.
 // The type parameter T specifies the type of the event's payload.
 type ConsumableEvent[T any] struct {
 	Metadata
+	DeliveryInfo
 	Payload T
 }
 
@@ -32,5 +40,6 @@ type PublishableEvent struct {
 // so that later the json.RawMessage can be unmarshal to ConsumableEvent[T].Payload
 type unmarshalEvent struct {
 	Metadata
+	DeliveryInfo
 	Payload json.RawMessage `json:"payload"`
 }

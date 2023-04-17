@@ -9,11 +9,15 @@ import (
 	"github.com/pmorelli92/bunnify/bunnify"
 )
 
-func TestSingleConsumerPublisher(t *testing.T) {
+func TestConsumerPublisher(t *testing.T) {
 	// Setup
 	queueName := fmt.Sprintf("queue-%d", time.Now().Unix())
 	exchangeName := fmt.Sprintf("exchange-%d", time.Now().Unix())
 	routingKey := "order.orderCreated"
+
+	type orderCreated struct {
+		ID string `json:"id"`
+	}
 
 	publishedOrderCreated := orderCreated{
 		ID: fmt.Sprint(time.Now().Unix()),
@@ -37,17 +41,18 @@ func TestSingleConsumerPublisher(t *testing.T) {
 	c := bunnify.NewConnection()
 	c.Start()
 
-	c.NewQueueListener(
-		exchangeName,
+	c.NewListener(
 		queueName,
-		bunnify.NewHandlerFor(routingKey, eventHandler),
+		bunnify.WithBindingTo(exchangeName),
+		bunnify.WithHandler(routingKey, eventHandler),
 	).Listen()
 
-	if err := c.NewPublisher().Publish(
+	err := c.NewPublisher().Publish(
 		context.TODO(),
 		exchangeName,
 		routingKey,
-		publishedEvent); err != nil {
+		publishedEvent)
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,20 +60,24 @@ func TestSingleConsumerPublisher(t *testing.T) {
 
 	// Assert
 	if publishedEvent.ID != consumedEvent.ID {
-		t.Fatal("ous")
+		t.Fatalf("expected event ID %s, got %s", publishedEvent.ID, consumedEvent.ID)
 	}
 	if publishedEvent.CorrelationID != consumedEvent.CorrelationID {
-		t.Fatal("ous")
+		t.Fatalf("expected correlation ID %s, got %s", publishedEvent.CorrelationID, consumedEvent.CorrelationID)
 	}
 	if !publishedEvent.Timestamp.Equal(consumedEvent.Timestamp) {
-		why := fmt.Sprintf("p: %s and c: %s", publishedEvent.Timestamp, consumedEvent.Timestamp)
-		t.Fatal(why)
+		t.Fatalf("expected timestamp %s, got %s", publishedEvent.Timestamp, consumedEvent.Timestamp)
 	}
 	if publishedOrderCreated.ID != consumedEvent.Payload.ID {
-		t.Fatal("ous")
+		t.Fatalf("expected order created ID %s, got %s", publishedOrderCreated.ID, consumedEvent.Payload.ID)
 	}
-}
-
-type orderCreated struct {
-	ID string `json:"id"`
+	if exchangeName != consumedEvent.DeliveryInfo.Exchange {
+		t.Fatalf("expected exchange %s, got %s", exchangeName, consumedEvent.DeliveryInfo.Exchange)
+	}
+	if queueName != consumedEvent.DeliveryInfo.Queue {
+		t.Fatalf("expected queue %s, got %s", queueName, consumedEvent.DeliveryInfo.Queue)
+	}
+	if routingKey != consumedEvent.DeliveryInfo.RoutingKey {
+		t.Fatalf("expected routing key %s, got %s", routingKey, consumedEvent.DeliveryInfo.RoutingKey)
+	}
 }

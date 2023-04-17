@@ -49,17 +49,27 @@ func main() {
 	c.Start()
 
 	c.NewQueueListener(
-		"exchange1",
 		"queue1",
-		bunnify.NewHandlerFor("catCreated", HandleCatCreated),
-		bunnify.NewHandlerFor("personCreated", HandlePersonCreated)).Listen()
+		bunnify.WithBinding("exchange1"),
+		bunnify.WithHandler("catCreated", HandleCatCreated),
+		bunnify.WithHandler("personCreated", HandlePersonCreated)),
+		bunnify.WithDeadLetterQueue("dead-queue").Listen()
+
+	c.NewQueueListener(
+		"dead-queue",
+		bunnify.WithDefaultHandler(HandleDefault)).Listen()
 
 	wg := sync.WaitGroup{}
+	wg.Add(1)
 	wg.Wait()
 }
 
 type personCreated struct {
 	Name string `json:"name"`
+}
+
+func HandleDefault(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
+		return nil
 }
 
 func HandlePersonCreated(ctx context.Context, event bunnify.ConsumableEvent[personCreated]) error {

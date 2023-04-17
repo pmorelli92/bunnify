@@ -17,7 +17,7 @@ type Publisher struct {
 func (c *Connection) NewPublisher() *Publisher {
 	return &Publisher{
 		logger:     c.options.logger,
-		getChannel: c.newChannel,
+		getChannel: c.getNewChannel,
 	}
 }
 
