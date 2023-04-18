@@ -49,7 +49,7 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 
 	c.NewListener(
 		queueName,
-		bunnify.WithBindingTo(exchangeName),
+		bunnify.WithExchangeToBind(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
 		bunnify.WithDeadLetterQueue(deadLetterQueueName),
 	).Listen()

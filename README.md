@@ -9,13 +9,13 @@
 [![Tests](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml/badge.svg?branch=main)](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/pmorelli92/bunnify/badge.svg?branch=main)](https://coveralls.io/github/pmorelli92/bunnify?branch=main)
 
-</div>
-
 Bunnify is a library for publishing and consuming events for AMQP.
+
+</div>
 
 ## Features
 
-**Easy setup:** Bunnify is designed to be easy to set up and use. Simply install the library and start publishing and consuming events.
+**Easy setup:** Bunnify is designed to be easy to set up and use. Simply reference the library and start publishing and consuming events.
 
 **Automatic payload marshaling and unmarshaling:** You can consume the same payload you published, without worrying about the details of marshaling and unmarshaling. Bunnify handles these actions for you, abstracting them away from the developer.
 
@@ -50,6 +50,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -61,14 +62,14 @@ func main() {
 	c := bunnify.NewConnection()
 	c.Start()
 
-	c.NewQueueListener(
+	c.NewListener(
 		"queue1",
-		bunnify.WithBinding("exchange1"),
+		bunnify.WithExchangeToBind("exchange1"),
 		bunnify.WithHandler("catCreated", HandleCatCreated),
-		bunnify.WithHandler("personCreated", HandlePersonCreated)),
-		bunnify.WithDeadLetterQueue("dead-queue").Listen()
+		bunnify.WithHandler("personCreated", HandlePersonCreated),
+		bunnify.WithDeadLetterQueue("dead-queue")).Listen()
 
-	c.NewQueueListener(
+	c.NewListener(
 		"dead-queue",
 		bunnify.WithDefaultHandler(HandleDefault)).Listen()
 
@@ -82,7 +83,7 @@ type personCreated struct {
 }
 
 func HandleDefault(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
-		return nil
+	return nil
 }
 
 func HandlePersonCreated(ctx context.Context, event bunnify.ConsumableEvent[personCreated]) error {
@@ -104,6 +105,7 @@ func HandleCatCreated(ctx context.Context, event bunnify.ConsumableEvent[catCrea
 	fmt.Println("Cat created with years: " + fmt.Sprint(event.Payload.Years))
 	return nil
 }
+
 ```
 
 ### Publisher

@@ -43,7 +43,7 @@ func TestConsumerPublisher(t *testing.T) {
 
 	c.NewListener(
 		queueName,
-		bunnify.WithBindingTo(exchangeName),
+		bunnify.WithExchangeToBind(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
 	).Listen()
 
