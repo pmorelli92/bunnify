@@ -9,9 +9,9 @@
 [![Tests](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml/badge.svg?branch=main)](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/pmorelli92/bunnify/badge.svg?branch=main)](https://coveralls.io/github/pmorelli92/bunnify?branch=main)
 
-</div>
-
 Bunnify is a library for publishing and consuming events for AMQP.
+
+</div>
 
 ## Features
 
