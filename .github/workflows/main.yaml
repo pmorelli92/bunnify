@@ -20,5 +20,17 @@ jobs:
     - name: Start RabbitMQ
       run: docker compose -f tests/docker-compose.yaml up -d
 
-    - name: Tests
-      run: go test ./...
+    - name: Get cover tooling (1/2)
+      run: go get golang.org/x/tools/cmd/cover
+
+    - name: Get cover tooling (2/2)
+      run: go get github.com/mattn/goveralls
+
+    - name: Test
+      run: go test -coverprofile=profile.cov ./...
+
+    - name: Send coverage
+      uses: shogo82148/actions-goveralls@v1
+      with:
+        path-to-profile: profile.cov
+        github-token: ${{ secrets.GITHUB_TOKEN }}

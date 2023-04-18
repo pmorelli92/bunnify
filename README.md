@@ -4,7 +4,10 @@
 
 <div align="center">
 
-Report cards
+[![Go Report Card](https://goreportcard.com/badge/github.com/pmorelli92/bunnify)](https://goreportcard.com/report/github.com/pmorelli92/bunnify)
+[![GitHub license](https://img.shields.io/github/license/pmorelli92/bunnify)](LICENSE)
+[![CI](https://github.com/pmorelli92/bunnify/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/pmorelli92/bunnify/actions/workflows/main.yml)
+[![Coverage Status](https://coveralls.io/repos/github/pmorelli92/bunnify/badge.svg?branch=main)](https://coveralls.io/github/pmorelli92/bunnify?branch=main)
 
 </div>
 
