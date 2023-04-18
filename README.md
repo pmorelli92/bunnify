@@ -1,4 +1,12 @@
-# Bunnify (experimental stage)
+<p align="center">
+    <img src="https://repository-images.githubusercontent.com/625583628/1ba1f1da-b7c6-4b73-9441-3a7db2e7812a" width="320px">
+</p>
+
+<div align="center">
+
+Report cards
+
+</div>
 
 Bunnify is a library for publishing and consuming events for AMQP. It presents the following features:
 
