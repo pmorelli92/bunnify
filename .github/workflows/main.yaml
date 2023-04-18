@@ -27,7 +27,7 @@ jobs:
       run: go get github.com/mattn/goveralls
 
     - name: Test
-      run: go test -coverprofile=profile.cov ./...
+      run: go test -coverprofile=profile.cov -coverpkg=$(go list ./... | paste -sd ',' -) ./...
 
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1
