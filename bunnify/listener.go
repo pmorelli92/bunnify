@@ -23,7 +23,7 @@ func WithListenerLogger(logger Logger) func(*listenerOption) {
 	}
 }
 
-func WithBindingTo(exchange string) func(*listenerOption) {
+func WithExchangeToBind(exchange string) func(*listenerOption) {
 	return func(opt *listenerOption) {
 		opt.exchange = exchange
 	}
