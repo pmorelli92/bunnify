@@ -11,7 +11,9 @@
 
 </div>
 
-Bunnify is a library for publishing and consuming events for AMQP. It presents the following features:
+Bunnify is a library for publishing and consuming events for AMQP.
+
+## Features
 
 **Easy setup:** Bunnify is designed to be easy to set up and use. Simply install the library and start publishing and consuming events.
 
@@ -23,12 +25,6 @@ Bunnify is a library for publishing and consuming events for AMQP. It presents t
 
 **Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`, which means that it doesn't add any unnecessary dependencies to your project.
 
-## Experimental
-
-Important Note: Bunnify is currently in an early stage of development. This means that the API may change substantially in the coming weeks.
-
-I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
-
 ## Motivation
 
 Every workplace I have been had their own AMQP library. Most of the time the problems that they try to solve are reconnection, logging, correlation, handling the correct body type for events and dead letter. Most of this libraries are good but also built upon some other internal libraries and with some company's specifics that makes them impossible to open source.
@@ -36,6 +32,12 @@ Every workplace I have been had their own AMQP library. Most of the time the pro
 Some developers are often spoiled with these as they provide a good dev experience and that is great; but you cannot use it in side projects, or if you start your own company.
 
 Bunnify aims to provide a flexible and adaptable solution that can be used in a variety of environments and scenarios. By abstracting away many of the technical details of AMQP publishing and consumption, Bunnify makes it easy to get started with event-driven architecture without needing to be an AMQP expert.
+
+## Experimental
+
+Important Note: Bunnify is currently in an early stage of development. This means that the API may change substantially in the coming weeks.
+
+I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
 
 ## Example
 
