@@ -1,4 +1,15 @@
-# Bunnify (experimental stage)
+<p align="center">
+    <img src="logo.png" width="320px">
+</p>
+
+<div align="center">
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/pmorelli92/bunnify)](https://goreportcard.com/report/github.com/pmorelli92/bunnify)
+[![GitHub license](https://img.shields.io/github/license/pmorelli92/bunnify)](LICENSE)
+[![Tests](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml/badge.svg?branch=main)](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml)
+[![Coverage Status](https://coveralls.io/repos/github/pmorelli92/bunnify/badge.svg?branch=main)](https://coveralls.io/github/pmorelli92/bunnify?branch=main)
+
+</div>
 
 Bunnify is a library for publishing and consuming events for AMQP. It presents the following features:
 
