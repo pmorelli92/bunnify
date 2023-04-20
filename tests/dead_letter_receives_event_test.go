@@ -7,14 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
 )
 
 func TestDeadLetterReceivesEvent(t *testing.T) {
 	// Setup
-	queueName := fmt.Sprintf("t2-queue-%d", time.Now().Unix())
-	deadLetterQueueName := fmt.Sprintf("t2-dead-%d", time.Now().Unix())
-	exchangeName := fmt.Sprintf("t2-exchange-%d", time.Now().Unix())
+	queueName := uuid.NewString()
+	deadLetterQueueName := uuid.NewString()
+	exchangeName := uuid.NewString()
 	routingKey := "order.orderCreated"
 
 	type orderCreated struct {
@@ -22,16 +23,13 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	}
 
 	publishedOrderCreated := orderCreated{
-		ID: fmt.Sprint(time.Now().Unix()),
+		ID: uuid.NewString(),
 	}
-	publishedEvent := bunnify.PublishableEvent{
-		Metadata: bunnify.Metadata{
-			ID:            fmt.Sprint(time.Now().Unix()),
-			CorrelationID: fmt.Sprint(time.Now().Unix()),
-			Timestamp:     time.Now(),
-		},
-		Payload: publishedOrderCreated,
-	}
+	publishedEvent := bunnify.NewPublishableEvent(
+		publishedOrderCreated,
+		bunnify.WithEventID("custom-event-id"),
+		bunnify.WithCorrelationID("custom-correlation-id"),
+	)
 
 	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
 		return fmt.Errorf("error, this event will go to dead-letter")
@@ -44,22 +42,33 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	}
 
 	// Exercise
-	c := bunnify.NewConnection()
-	c.Start()
+	connection := bunnify.NewConnection()
+	connection.Start()
 
-	c.NewListener(
+	consumer, err := connection.NewConsumer(
 		queueName,
-		bunnify.WithExchangeToBind(exchangeName),
+		bunnify.WithQoS(2, 0),
+		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
 		bunnify.WithDeadLetterQueue(deadLetterQueueName),
-	).Listen()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	c.NewListener(
+	consumer.Consume()
+
+	deadLetterConsumer, err := connection.NewConsumer(
 		deadLetterQueueName,
 		bunnify.WithDefaultHandler(defaultHandler),
-	).Listen()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err := c.NewPublisher().Publish(
+	deadLetterConsumer.Consume()
+
+	err = connection.NewPublisher().Publish(
 		context.TODO(),
 		exchangeName,
 		routingKey,

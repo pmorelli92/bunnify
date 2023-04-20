@@ -23,7 +23,7 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 **Built-in event metadata handling:** The library automatically handles event metadata, including correlation IDs and other important details.
 
-**Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`, which means that it doesn't add any unnecessary dependencies to your project.
+**Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`. That and `github.com/google/uuid` are the only dependencies this library is using.
 
 ## Motivation
 
@@ -39,6 +39,11 @@ Important Note: Bunnify is currently in an early stage of development. This mean
 
 I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
 
+Things I want to do:
+
+1. Support for metrics.
+2. Support for open telemetry.
+
 ## Example
 
 You can find working examples under the `tests` folder.
@@ -52,6 +57,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -59,31 +65,39 @@ import (
 )
 
 func main() {
-	c := bunnify.NewConnection()
-	c.Start()
+	connection := bunnify.NewConnection()
+	connection.Start()
 
-	c.NewListener(
+	consumer, err := connection.NewConsumer(
 		"queue1",
-		bunnify.WithExchangeToBind("exchange1"),
+		bunnify.WithBindingToExchange("exchange1"),
 		bunnify.WithHandler("catCreated", HandleCatCreated),
 		bunnify.WithHandler("personCreated", HandlePersonCreated),
-		bunnify.WithDeadLetterQueue("dead-queue")).Listen()
+		bunnify.WithDeadLetterQueue("dead-queue"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	consumer.Consume()
 
-	c.NewListener(
+	deadLetterConsumer, err := connection.NewConsumer(
 		"dead-queue",
-		bunnify.WithDefaultHandler(HandleDefault)).Listen()
+		bunnify.WithDefaultHandler(HandleDefault))
+	if err != nil {
+		log.Fatal(err)
+	}
+	deadLetterConsumer.Consume()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wg.Wait()
 }
 
-type personCreated struct {
-	Name string `json:"name"`
-}
-
 func HandleDefault(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
 	return nil
+}
+
+type personCreated struct {
+	Name string `json:"name"`
 }
 
 func HandlePersonCreated(ctx context.Context, event bunnify.ConsumableEvent[personCreated]) error {
@@ -105,7 +119,6 @@ func HandleCatCreated(ctx context.Context, event bunnify.ConsumableEvent[catCrea
 	fmt.Println("Cat created with years: " + fmt.Sprint(event.Payload.Years))
 	return nil
 }
-
 ```
 
 ### Publisher
@@ -127,19 +140,12 @@ func main() {
 
 	publisher := c.NewPublisher()
 
-	event := bunnify.PublishableEvent{
-		Metadata: bunnify.Metadata{
-			ID:            "12345",
-			CorrelationID: "6789",
-			Timestamp:     time.Now(),
-		},
-		Payload: catCreated{
-			Years: 22,
-		},
-	}
+	event := bunnify.NewPublishableEvent(catCreated{
+		Years: 22,
+	})
 
 	if err := publisher.Publish(context.TODO(), "exchange1", "catCreated", event); err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 }
 

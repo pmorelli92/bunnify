@@ -18,15 +18,19 @@ const (
 	connectionClosedBySystem     = "connection closed by system, channel will not reconnect"
 )
 
+// Logger is an interface that a developer can override to decide what
+// to do with the connection and channel related messages.
 type Logger interface {
 	Info(message string)
 	Error(message string)
 }
 
+// DefaultLogger is used to log the messages to stdout as json.
 type DefaultLogger struct {
 	logger *slog.Logger
 }
 
+// NewDefaultLogger creates a DefaultLogger.
 func NewDefaultLogger() DefaultLogger {
 	return DefaultLogger{
 		logger: slog.New(slog.NewJSONHandler(os.Stdout)),
@@ -41,9 +45,11 @@ func (dl DefaultLogger) Error(message string) {
 	dl.logger.Error(message)
 }
 
+// SilentLogger will not log any message to stdout.
 type SilentLogger struct {
 }
 
+// NewSilentLogger creates a SilentLogger.
 func NewSilentLogger() SilentLogger {
 	return SilentLogger{}
 }
