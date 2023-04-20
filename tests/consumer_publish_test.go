@@ -43,6 +43,7 @@ func TestConsumerPublisher(t *testing.T) {
 
 	consumer, err := connection.NewConsumer(
 		queueName,
+		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
 	)

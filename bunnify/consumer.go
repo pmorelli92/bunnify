@@ -15,6 +15,9 @@ type consumerOption struct {
 	exchange        string
 	defaultHandler  wrappedHandler
 	handlers        map[string]wrappedHandler
+	prefetchCount   int
+	prefetchSize    int
+	quorumQueue     bool
 }
 
 // WithConsumerLogger specifies which logger to use for channel
@@ -30,6 +33,22 @@ func WithConsumerLogger(logger Logger) func(*consumerOption) {
 func WithBindingToExchange(exchange string) func(*consumerOption) {
 	return func(opt *consumerOption) {
 		opt.exchange = exchange
+	}
+}
+
+// WithQoS specifies the prefetch count and size for the consumer.
+func WithQoS(prefetchCount, prefetchSize int) func(*consumerOption) {
+	return func(opt *consumerOption) {
+		opt.prefetchCount = prefetchCount
+		opt.prefetchSize = prefetchSize
+	}
+}
+
+// WithQuorumQueue specifies that the queue to consume will be created as quorum queue.
+// Quorum queues are used when data safety is the priority.
+func WithQuorumQueue() func(*consumerOption) {
+	return func(opt *consumerOption) {
+		opt.quorumQueue = true
 	}
 }
 
@@ -67,13 +86,17 @@ type Consumer struct {
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
 // If handlers or default handler are not specified, it will return error.
+// As default, if no logger indicated, the channel related messages will be logged in the stdout.
+// If no QoS is supplied the prefetch count will be of 20.
 func (c *Connection) NewConsumer(
 	queueName string,
 	opts ...func(*consumerOption)) (Consumer, error) {
 
 	options := consumerOption{
-		logger:   NewDefaultLogger(),
-		handlers: make(map[string]wrappedHandler, 0),
+		logger:        NewDefaultLogger(),
+		handlers:      make(map[string]wrappedHandler, 0),
+		prefetchCount: 20,
+		prefetchSize:  0,
 	}
 	for _, opt := range opts {
 		opt(&options)
@@ -112,6 +135,11 @@ func (c Consumer) Consume() {
 		return
 	}
 
+	if err := channel.Qos(c.options.prefetchCount, c.options.prefetchSize, false); err != nil {
+		c.options.logger.Error(fmt.Sprintf("failed to set qos: %s", err))
+		return
+	}
+
 	deliveries, err := channel.Consume(c.queueName, "", false, false, false, false, nil)
 	if err != nil {
 		c.options.logger.Error(fmt.Sprintf("failed to establish consuming from queue: %s", err))
@@ -146,6 +174,10 @@ func (c Consumer) Consume() {
 			}
 
 			_ = delivery.Ack(false)
+		}
+
+		if !channel.IsClosed() {
+			channel.Close()
 		}
 
 		c.options.logger.Info(channelConnectionLost)
@@ -233,6 +265,10 @@ func (c Consumer) createQueues(channel *amqp.Channel) error {
 	errs := make([]error, 0)
 
 	amqpTable := amqp.Table{}
+
+	if c.options.quorumQueue {
+		amqpTable["x-queue-type"] = "quorum"
+	}
 
 	if c.options.deadLetterQueue != "" {
 		amqpTable = amqp.Table{
