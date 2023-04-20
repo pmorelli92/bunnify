@@ -47,11 +47,11 @@ You can find working examples under the `tests` folder.
 
 ```go
 package main
-
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -59,31 +59,39 @@ import (
 )
 
 func main() {
-	c := bunnify.NewConnection()
-	c.Start()
+	connection := bunnify.NewConnection()
+	connection.Start()
 
-	c.NewListener(
+	consumer, err := connection.NewConsumer(
 		"queue1",
-		bunnify.WithExchangeToBind("exchange1"),
+		bunnify.WithBindingToExchange("exchange1"),
 		bunnify.WithHandler("catCreated", HandleCatCreated),
 		bunnify.WithHandler("personCreated", HandlePersonCreated),
-		bunnify.WithDeadLetterQueue("dead-queue")).Listen()
+		bunnify.WithDeadLetterQueue("dead-queue"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	consumer.Consume()
 
-	c.NewListener(
+	deadLetterConsumer, err := connection.NewConsumer(
 		"dead-queue",
-		bunnify.WithDefaultHandler(HandleDefault)).Listen()
+		bunnify.WithDefaultHandler(HandleDefault))
+	if err != nil {
+		log.Fatal(err)
+	}
+	deadLetterConsumer.Consume()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wg.Wait()
 }
 
-type personCreated struct {
-	Name string `json:"name"`
-}
-
 func HandleDefault(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
 	return nil
+}
+
+type personCreated struct {
+	Name string `json:"name"`
 }
 
 func HandlePersonCreated(ctx context.Context, event bunnify.ConsumableEvent[personCreated]) error {
@@ -105,7 +113,6 @@ func HandleCatCreated(ctx context.Context, event bunnify.ConsumableEvent[catCrea
 	fmt.Println("Cat created with years: " + fmt.Sprint(event.Payload.Years))
 	return nil
 }
-
 ```
 
 ### Publisher

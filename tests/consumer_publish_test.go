@@ -38,16 +38,21 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 
 	// Exercise
-	c := bunnify.NewConnection()
-	c.Start()
+	connection := bunnify.NewConnection()
+	connection.Start()
 
-	c.NewListener(
+	consumer, err := connection.NewConsumer(
 		queueName,
-		bunnify.WithExchangeToBind(exchangeName),
+		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
-	).Listen()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	err := c.NewPublisher().Publish(
+	consumer.Consume()
+
+	err = connection.NewPublisher().Publish(
 		context.TODO(),
 		exchangeName,
 		routingKey,

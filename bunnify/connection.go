@@ -13,24 +13,33 @@ type connectionOption struct {
 	reconnectInterval time.Duration
 }
 
+// WithURI allows the consumer to specify the AMQP Server
+// it should be in the format of amqp://0.0.0.0:5672
 func WithURI(URI string) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.uri = URI
 	}
 }
 
+// WithReconnectInterval establishes how much time to wait
+// between each attempt of connection
 func WithReconnectInterval(interval time.Duration) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.reconnectInterval = interval
 	}
 }
 
+// WithConnectionLogger specifies which logger to use for connection
+// related messages such as connection established, reconnecting, etc.
 func WithConnectionLogger(logger Logger) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.logger = logger
 	}
 }
 
+// Connection represents a connection towards the AMQP server.
+// A single connection should be enough for the entire application as the
+// consuming and publishing is handled by channels.
 type Connection struct {
 	options                  connectionOption
 	connection               *amqp.Connection
@@ -39,7 +48,7 @@ type Connection struct {
 
 // NewConnection creates a new AMQP connection using the indicated
 // options. If the consumer does not supply options, it will by default
-// connect to a localhost instance, try to reconnect every 5 seconds
+// connect to a localhost instance on, try to reconnect every 5 seconds
 // and log connection related messages as json on the stdout.
 func NewConnection(opts ...func(*connectionOption)) *Connection {
 	options := connectionOption{
@@ -55,7 +64,7 @@ func NewConnection(opts ...func(*connectionOption)) *Connection {
 	}
 }
 
-// Start establishes the connection of the AMQP server.
+// Start establishes the connection towards the AMQP server.
 func (c *Connection) Start() {
 	var err error
 	var conn *amqp.Connection
@@ -83,6 +92,7 @@ func (c *Connection) Start() {
 	}()
 }
 
+// Closes connection with towards the AMQP server
 func (c *Connection) Close() error {
 	c.connectionClosedBySystem = true
 	if c.connection != nil {
