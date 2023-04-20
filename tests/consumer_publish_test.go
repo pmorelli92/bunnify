@@ -2,17 +2,17 @@ package tests
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
 )
 
 func TestConsumerPublisher(t *testing.T) {
 	// Setup
-	queueName := fmt.Sprintf("t1-queue-%d", time.Now().Unix())
-	exchangeName := fmt.Sprintf("t1-exchange-%d", time.Now().Unix())
+	queueName := uuid.NewString()
+	exchangeName := uuid.NewString()
 	routingKey := "order.orderCreated"
 
 	type orderCreated struct {
@@ -20,16 +20,9 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 
 	publishedOrderCreated := orderCreated{
-		ID: fmt.Sprint(time.Now().Unix()),
+		ID: uuid.NewString(),
 	}
-	publishedEvent := bunnify.PublishableEvent{
-		Metadata: bunnify.Metadata{
-			ID:            fmt.Sprint(time.Now().Unix()),
-			CorrelationID: fmt.Sprint(time.Now().Unix()),
-			Timestamp:     time.Now(),
-		},
-		Payload: publishedOrderCreated,
-	}
+	publishedEvent := bunnify.NewPublishableEvent(publishedOrderCreated)
 
 	var consumedEvent bunnify.ConsumableEvent[orderCreated]
 	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
@@ -38,7 +31,11 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 
 	// Exercise
-	connection := bunnify.NewConnection()
+	connection := bunnify.NewConnection(
+		bunnify.WithURI("amqp://localhost:5672"),
+		bunnify.WithReconnectInterval(1*time.Second),
+		bunnify.WithConnectionLogger(bunnify.NewSilentLogger()),
+	)
 	connection.Start()
 
 	consumer, err := connection.NewConsumer(
@@ -46,6 +43,7 @@ func TestConsumerPublisher(t *testing.T) {
 		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
+		bunnify.WithConsumerLogger(bunnify.NewSilentLogger()),
 	)
 	if err != nil {
 		t.Fatal(err)

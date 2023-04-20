@@ -7,14 +7,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
 )
 
 func TestDeadLetterReceivesEvent(t *testing.T) {
 	// Setup
-	queueName := fmt.Sprintf("t2-queue-%d", time.Now().Unix())
-	deadLetterQueueName := fmt.Sprintf("t2-dead-%d", time.Now().Unix())
-	exchangeName := fmt.Sprintf("t2-exchange-%d", time.Now().Unix())
+	queueName := uuid.NewString()
+	deadLetterQueueName := uuid.NewString()
+	exchangeName := uuid.NewString()
 	routingKey := "order.orderCreated"
 
 	type orderCreated struct {
@@ -22,16 +23,13 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	}
 
 	publishedOrderCreated := orderCreated{
-		ID: fmt.Sprint(time.Now().Unix()),
+		ID: uuid.NewString(),
 	}
-	publishedEvent := bunnify.PublishableEvent{
-		Metadata: bunnify.Metadata{
-			ID:            fmt.Sprint(time.Now().Unix()),
-			CorrelationID: fmt.Sprint(time.Now().Unix()),
-			Timestamp:     time.Now(),
-		},
-		Payload: publishedOrderCreated,
-	}
+	publishedEvent := bunnify.NewPublishableEvent(
+		publishedOrderCreated,
+		bunnify.WithEventID("custom-event-id"),
+		bunnify.WithCorrelationID("custom-correlation-id"),
+	)
 
 	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
 		return fmt.Errorf("error, this event will go to dead-letter")
@@ -49,6 +47,7 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 
 	consumer, err := connection.NewConsumer(
 		queueName,
+		bunnify.WithQoS(2, 0),
 		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
 		bunnify.WithDeadLetterQueue(deadLetterQueueName),

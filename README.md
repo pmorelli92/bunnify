@@ -23,7 +23,7 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 **Built-in event metadata handling:** The library automatically handles event metadata, including correlation IDs and other important details.
 
-**Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`, which means that it doesn't add any unnecessary dependencies to your project.
+**Minimal dependencies:** Bunnify is built on top of `github.com/rabbitmq/amqp091-go`. That and `github.com/google/uuid` are the only dependencies this library is using.
 
 ## Motivation
 
@@ -39,6 +39,11 @@ Important Note: Bunnify is currently in an early stage of development. This mean
 
 I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
 
+Things I want to do:
+
+1. Support for metrics.
+2. Support for open telemetry.
+
 ## Example
 
 You can find working examples under the `tests` folder.
@@ -47,6 +52,7 @@ You can find working examples under the `tests` folder.
 
 ```go
 package main
+
 import (
 	"context"
 	"encoding/json"
@@ -134,19 +140,12 @@ func main() {
 
 	publisher := c.NewPublisher()
 
-	event := bunnify.PublishableEvent{
-		Metadata: bunnify.Metadata{
-			ID:            "12345",
-			CorrelationID: "6789",
-			Timestamp:     time.Now(),
-		},
-		Payload: catCreated{
-			Years: 22,
-		},
-	}
+	event := bunnify.NewPublishableEvent(catCreated{
+		Years: 22,
+	})
 
 	if err := publisher.Publish(context.TODO(), "exchange1", "catCreated", event); err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	}
 }
 
