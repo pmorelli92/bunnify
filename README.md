@@ -56,15 +56,12 @@ You can find working examples under the `tests` folder.
 ### Consumer
 
 ```go
-package main
-
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/pmorelli92/bunnify/bunnify"
 )
@@ -73,24 +70,24 @@ func main() {
 	connection := bunnify.NewConnection()
 	connection.Start()
 
-	consumer, err := connection.NewConsumer(
+	consumer := connection.NewConsumer(
 		"queue1",
 		bunnify.WithBindingToExchange("exchange1"),
 		bunnify.WithHandler("catCreated", HandleCatCreated),
 		bunnify.WithHandler("personCreated", HandlePersonCreated),
 		bunnify.WithDeadLetterQueue("dead-queue"))
-	if err != nil {
+
+	if err := consumer.Consume(); err != nil {
 		log.Fatal(err)
 	}
-	consumer.Consume()
 
-	deadLetterConsumer, err := connection.NewConsumer(
+	deadLetterConsumer := connection.NewConsumer(
 		"dead-queue",
 		bunnify.WithDefaultHandler(HandleDefault))
-	if err != nil {
+
+	if err := deadLetterConsumer.Consume(); err != nil {
 		log.Fatal(err)
 	}
-	deadLetterConsumer.Consume()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -133,8 +130,7 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"time"
+	"log"
 
 	"github.com/pmorelli92/bunnify/bunnify"
 )
