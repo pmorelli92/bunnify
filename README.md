@@ -23,11 +23,11 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 **Built-in event metadata handling:** The library automatically handles event metadata, including correlation IDs and other important details.
 
-**Minimal dependencies:** The intention of the library is to avoid being a vector of attack because of using lots of not needed dependencies. I will always try to curate the dependencies and I compromise to only use:
+**Minimal dependencies:** The intention of the library is to avoid being a vector of attack due to lots of unneeded dependencies. I will always try to curate the dependencies and I compromise only to use:
 
 - `github.com/rabbitmq/amqp091-go`: Handles the connection with AMQP protocol.
 - `github.com/google/uuid`: Generates UUID for events ID and correlation ID.
-- `go.uber.org/goleak`: Verifies that there are no leaks of routines on the handling of channels.
+- `go.uber.org/goleak`: Used on tests to verify that there are no leaks of routines on the handling of channels.
 - Something Prometheus.
 
 ## Motivation
