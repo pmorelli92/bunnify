@@ -8,13 +8,13 @@ import (
 )
 
 type connectionOption struct {
-	logger            Logger
-	uri               string
-	reconnectInterval time.Duration
+	uri                 string
+	reconnectInterval   time.Duration
+	notificationChannel chan<- Notification
 }
 
-// WithURI allows the consumer to specify the AMQP Server
-// it should be in the format of amqp://0.0.0.0:5672
+// WithURI allows the consumer to specify the AMQP Server.
+// It should be in the format of amqp://0.0.0.0:5672
 func WithURI(URI string) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.uri = URI
@@ -22,18 +22,18 @@ func WithURI(URI string) func(*connectionOption) {
 }
 
 // WithReconnectInterval establishes how much time to wait
-// between each attempt of connection
+// between each attempt of connection.
 func WithReconnectInterval(interval time.Duration) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.reconnectInterval = interval
 	}
 }
 
-// WithConnectionLogger specifies which logger to use for connection
-// related messages such as connection established, reconnecting, etc.
-func WithConnectionLogger(logger Logger) func(*connectionOption) {
+// WithNotificationChannel specifies a go channel to receive messages
+// such as connection established, reconnecting, event published, consumed, etc.
+func WithNotificationChannel(notificationCh chan<- Notification) func(*connectionOption) {
 	return func(opt *connectionOption) {
-		opt.logger = logger
+		opt.notificationChannel = notificationCh
 	}
 }
 
@@ -53,7 +53,6 @@ type Connection struct {
 func NewConnection(opts ...func(*connectionOption)) *Connection {
 	options := connectionOption{
 		reconnectInterval: 5 * time.Second,
-		logger:            NewDefaultLogger(),
 		uri:               "amqp://localhost:5672",
 	}
 	for _, opt := range opts {
@@ -76,17 +75,28 @@ func (c *Connection) Start() {
 			break
 		}
 
-		c.options.logger.Error(fmt.Sprintf(serverConnectionFailed, err))
+		sendError(
+			c.options.notificationChannel,
+			NotificationProducerConnection,
+			fmt.Sprintf(serverConnectionFailed, err))
+
 		<-ticker.C
 	}
 
-	c.options.logger.Info(serverConnectionEstablished)
 	c.connection = conn
+	sendInfo(
+		c.options.notificationChannel,
+		NotificationProducerConnection,
+		serverConnectionEstablished)
 
 	go func() {
 		<-conn.NotifyClose(make(chan *amqp.Error))
 		if !c.connectionClosedBySystem {
-			c.options.logger.Error(serverConnectionLost)
+			sendError(
+				c.options.notificationChannel,
+				NotificationProducerConnection,
+				serverConnectionLost)
+
 			c.Start()
 		}
 	}()
@@ -96,15 +106,22 @@ func (c *Connection) Start() {
 func (c *Connection) Close() error {
 	c.connectionClosedBySystem = true
 	if c.connection != nil {
-		c.options.logger.Info(serverClosingConnection)
+		sendInfo(
+			c.options.notificationChannel,
+			NotificationProducerConnection,
+			serverClosingConnection)
+
 		return c.connection.Close()
 	}
 	return nil
 }
 
-func (c *Connection) getNewChannel() (*amqp.Channel, bool) {
+func (c *Connection) getNewChannel(producer NotificationProducer) (*amqp.Channel, bool) {
 	if c.connectionClosedBySystem {
-		c.options.logger.Info(connectionClosedBySystem)
+		sendInfo(
+			c.options.notificationChannel,
+			producer,
+			connectionClosedBySystem)
 		return nil, true
 	}
 
@@ -118,10 +135,18 @@ func (c *Connection) getNewChannel() (*amqp.Channel, bool) {
 			break
 		}
 
-		c.options.logger.Error(fmt.Sprintf(channelConnectionFailed, err))
+		sendError(
+			c.options.notificationChannel,
+			producer,
+			fmt.Sprintf(channelConnectionFailed, err))
+
 		<-ticker.C
 	}
 
-	c.options.logger.Info(channelConnectionEstablished)
+	sendInfo(
+		c.options.notificationChannel,
+		producer,
+		channelConnectionEstablished)
+
 	return ch, false
 }

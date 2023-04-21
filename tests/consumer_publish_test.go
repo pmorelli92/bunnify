@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -30,26 +31,35 @@ func TestConsumerPublisher(t *testing.T) {
 		return nil
 	}
 
+	notificationChannel := make(chan bunnify.Notification)
+	go func() {
+		for {
+			n := <-notificationChannel
+			fmt.Println(n)
+		}
+	}()
+
 	// Exercise
 	connection := bunnify.NewConnection(
 		bunnify.WithURI("amqp://localhost:5672"),
 		bunnify.WithReconnectInterval(1*time.Second),
-		bunnify.WithConnectionLogger(bunnify.NewSilentLogger()),
-	)
+		bunnify.WithNotificationChannel(notificationChannel))
+
 	connection.Start()
 
 	consumer, err := connection.NewConsumer(
 		queueName,
 		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
-		bunnify.WithHandler(routingKey, eventHandler),
-		bunnify.WithConsumerLogger(bunnify.NewSilentLogger()),
-	)
+		bunnify.WithHandler(routingKey, eventHandler))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	consumer.Consume()
+	err = consumer.Consume()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = connection.NewPublisher().Publish(
 		context.TODO(),
