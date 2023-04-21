@@ -1,20 +1,19 @@
 package bunnify
 
 import (
-	"fmt"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type connectionOption struct {
-	logger            Logger
-	uri               string
-	reconnectInterval time.Duration
+	uri                 string
+	reconnectInterval   time.Duration
+	notificationChannel chan<- Notification
 }
 
-// WithURI allows the consumer to specify the AMQP Server
-// it should be in the format of amqp://0.0.0.0:5672
+// WithURI allows the consumer to specify the AMQP Server.
+// It should be in the format of amqp://0.0.0.0:5672
 func WithURI(URI string) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.uri = URI
@@ -22,18 +21,18 @@ func WithURI(URI string) func(*connectionOption) {
 }
 
 // WithReconnectInterval establishes how much time to wait
-// between each attempt of connection
+// between each attempt of connection.
 func WithReconnectInterval(interval time.Duration) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.reconnectInterval = interval
 	}
 }
 
-// WithConnectionLogger specifies which logger to use for connection
-// related messages such as connection established, reconnecting, etc.
-func WithConnectionLogger(logger Logger) func(*connectionOption) {
+// WithNotificationChannel specifies a go channel to receive messages
+// such as connection established, reconnecting, event published, consumed, etc.
+func WithNotificationChannel(notificationCh chan<- Notification) func(*connectionOption) {
 	return func(opt *connectionOption) {
-		opt.logger = logger
+		opt.notificationChannel = notificationCh
 	}
 }
 
@@ -48,12 +47,10 @@ type Connection struct {
 
 // NewConnection creates a new AMQP connection using the indicated
 // options. If the consumer does not supply options, it will by default
-// connect to a localhost instance on, try to reconnect every 5 seconds
-// and log connection related messages as json on the stdout.
+// connect to a localhost instance on and try to reconnect every 10 seconds.
 func NewConnection(opts ...func(*connectionOption)) *Connection {
 	options := connectionOption{
-		reconnectInterval: 5 * time.Second,
-		logger:            NewDefaultLogger(),
+		reconnectInterval: 10 * time.Second,
 		uri:               "amqp://localhost:5672",
 	}
 	for _, opt := range opts {
@@ -76,17 +73,17 @@ func (c *Connection) Start() {
 			break
 		}
 
-		c.options.logger.Error(fmt.Sprintf(serverConnectionFailed, err))
+		notifyConnectionFailed(c.options.notificationChannel, err)
 		<-ticker.C
 	}
 
-	c.options.logger.Info(serverConnectionEstablished)
 	c.connection = conn
+	notifyConnectionEstablished(c.options.notificationChannel)
 
 	go func() {
 		<-conn.NotifyClose(make(chan *amqp.Error))
 		if !c.connectionClosedBySystem {
-			c.options.logger.Error(serverConnectionLost)
+			notifyConnectionLost(c.options.notificationChannel)
 			c.Start()
 		}
 	}()
@@ -96,15 +93,15 @@ func (c *Connection) Start() {
 func (c *Connection) Close() error {
 	c.connectionClosedBySystem = true
 	if c.connection != nil {
-		c.options.logger.Info(serverClosingConnection)
+		notifyClosingConnection(c.options.notificationChannel)
 		return c.connection.Close()
 	}
 	return nil
 }
 
-func (c *Connection) getNewChannel() (*amqp.Channel, bool) {
+func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, bool) {
 	if c.connectionClosedBySystem {
-		c.options.logger.Info(connectionClosedBySystem)
+		notifyConnectionClosedBySystem(c.options.notificationChannel)
 		return nil, true
 	}
 
@@ -118,10 +115,10 @@ func (c *Connection) getNewChannel() (*amqp.Channel, bool) {
 			break
 		}
 
-		c.options.logger.Error(fmt.Sprintf(channelConnectionFailed, err))
+		notifyChannelFailed(c.options.notificationChannel, source, err)
 		<-ticker.C
 	}
 
-	c.options.logger.Info(channelConnectionEstablished)
+	notifyChannelEstablished(c.options.notificationChannel, source)
 	return ch, false
 }

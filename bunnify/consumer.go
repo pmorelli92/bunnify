@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type consumerOption struct {
-	logger          Logger
 	deadLetterQueue string
 	exchange        string
 	defaultHandler  wrappedHandler
@@ -18,14 +18,7 @@ type consumerOption struct {
 	prefetchCount   int
 	prefetchSize    int
 	quorumQueue     bool
-}
-
-// WithConsumerLogger specifies which logger to use for channel
-// related messages such as connection established, reconnecting, etc.
-func WithConsumerLogger(logger Logger) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.logger = logger
-	}
+	notificationCh  chan<- Notification
 }
 
 // WithBindingToExchange specifies the exchange on which the queue
@@ -79,75 +72,83 @@ func WithHandler[T any](routingKey string, handler EventHandler[T]) func(*consum
 
 // Consumer is used for consuming to events from an specified queue.
 type Consumer struct {
-	queueName  string
-	options    consumerOption
-	getChannel func() (*amqp.Channel, bool)
+	queueName     string
+	initialized   bool
+	options       consumerOption
+	getNewChannel func() (*amqp.Channel, bool)
 }
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
-// If handlers or default handler are not specified, it will return error.
-// As default, if no logger indicated, the channel related messages will be logged in the stdout.
+// Information messages such as channel status will be sent to the notification channel
+// if it was specified on the connection struct.
 // If no QoS is supplied the prefetch count will be of 20.
 func (c *Connection) NewConsumer(
 	queueName string,
-	opts ...func(*consumerOption)) (Consumer, error) {
+	opts ...func(*consumerOption)) Consumer {
 
 	options := consumerOption{
-		logger:        NewDefaultLogger(),
-		handlers:      make(map[string]wrappedHandler, 0),
-		prefetchCount: 20,
-		prefetchSize:  0,
+		notificationCh: c.options.notificationChannel,
+		handlers:       make(map[string]wrappedHandler, 0),
+		prefetchCount:  20,
+		prefetchSize:   0,
 	}
 	for _, opt := range opts {
 		opt(&options)
 	}
 
-	if options.defaultHandler == nil && len(options.handlers) == 0 {
-		return Consumer{}, fmt.Errorf("no handlers specified")
-	}
-
 	return Consumer{
-		queueName:  queueName,
-		options:    options,
-		getChannel: c.getNewChannel,
-	}, nil
+		queueName: queueName,
+		options:   options,
+		getNewChannel: func() (*amqp.Channel, bool) {
+			return c.getNewChannel(NotificationSourceConsumer)
+		},
+	}
 }
 
 // Consume will start consuming events for the indicated queue.
-func (c Consumer) Consume() {
-	channel, connectionClosed := c.getChannel()
+// The first time this function is called it will return error if
+// handlers or default handler are not specified and also if queues, exchanges,
+// bindings or qos creation don't succeed. In case this function gets called
+// recursively due to channel reconnection, the errors will be pushed to
+// the notification channel (if one has been indicated in the connection).
+func (c Consumer) Consume() error {
+	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
-		return
+		return fmt.Errorf("connection is already closed by system")
 	}
 
-	if err := c.createExchanges(channel); err != nil {
-		c.options.logger.Error(fmt.Sprintf("failed to declare exchange: %s", err))
-		return
-	}
+	if !c.initialized {
+		if c.options.defaultHandler == nil && len(c.options.handlers) == 0 {
+			return fmt.Errorf("no handlers specified")
+		}
 
-	if err := c.createQueues(channel); err != nil {
-		c.options.logger.Error(fmt.Sprintf("failed to declare queue: %s", err))
-		return
-	}
+		if err := c.createExchanges(channel); err != nil {
+			return fmt.Errorf("failed to declare exchange: %w", err)
+		}
 
-	if err := c.queueBind(channel); err != nil {
-		c.options.logger.Error(fmt.Sprintf("failed to bind queue: %s", err))
-		return
+		if err := c.createQueues(channel); err != nil {
+			return fmt.Errorf("failed to declare queue: %w", err)
+		}
+
+		if err := c.queueBind(channel); err != nil {
+			return fmt.Errorf("failed to bind queue: %w", err)
+		}
+
+		c.initialized = true
 	}
 
 	if err := channel.Qos(c.options.prefetchCount, c.options.prefetchSize, false); err != nil {
-		c.options.logger.Error(fmt.Sprintf("failed to set qos: %s", err))
-		return
+		return fmt.Errorf("failed to set qos: %w", err)
 	}
 
 	deliveries, err := channel.Consume(c.queueName, "", false, false, false, false, nil)
 	if err != nil {
-		c.options.logger.Error(fmt.Sprintf("failed to establish consuming from queue: %s", err))
-		return
+		return fmt.Errorf("failed to establish consuming from queue: %w", err)
 	}
 
 	go func() {
 		for delivery := range deliveries {
+			startTime := time.Now()
 			deliveryInfo := getDeliveryInfo(c.queueName, delivery)
 
 			// Establish which handler is invoked
@@ -168,11 +169,13 @@ func (c Consumer) Consume() {
 			}
 
 			if err := handler(context.TODO(), uevt); err != nil {
-				c.options.logger.Error(fmt.Sprintf("event handler for %s failed with: %s", delivery.RoutingKey, err.Error()))
+				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
 				_ = delivery.Nack(false, false)
 				continue
 			}
 
+			elapsed := time.Since(startTime).Milliseconds()
+			notifyEventHandlerSucceed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed)
 			_ = delivery.Ack(false)
 		}
 
@@ -180,9 +183,14 @@ func (c Consumer) Consume() {
 			channel.Close()
 		}
 
-		c.options.logger.Info(channelConnectionLost)
-		go c.Consume()
+		notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+
+		if err = c.Consume(); err != nil {
+			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
+		}
 	}()
+
+	return nil
 }
 
 func getDeliveryInfo(queueName string, delivery amqp.Delivery) DeliveryInfo {

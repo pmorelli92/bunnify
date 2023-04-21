@@ -10,16 +10,16 @@ import (
 
 // Publisher is used for publishing events.
 type Publisher struct {
-	logger       Logger
-	inUseChannel *amqp.Channel
-	getChannel   func() (*amqp.Channel, bool)
+	inUseChannel  *amqp.Channel
+	getNewChannel func() (*amqp.Channel, bool)
 }
 
 // NewPublisher creates a publisher using the specified connection.
 func (c *Connection) NewPublisher() *Publisher {
 	return &Publisher{
-		logger:     c.options.logger,
-		getChannel: c.getNewChannel,
+		getNewChannel: func() (*amqp.Channel, bool) {
+			return c.getNewChannel(NotificationSourcePublisher)
+		},
 	}
 }
 
@@ -31,9 +31,9 @@ func (p *Publisher) Publish(
 	event PublishableEvent) error {
 
 	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
-		channel, connectionClosed := p.getChannel()
+		channel, connectionClosed := p.getNewChannel()
 		if connectionClosed {
-			return fmt.Errorf(connectionClosedBySystem)
+			return fmt.Errorf("connection closed by system, channel will not reconnect")
 		}
 		p.inUseChannel = channel
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
+	"go.uber.org/goleak"
 )
 
 func TestDeadLetterReceivesEvent(t *testing.T) {
@@ -45,28 +46,22 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	connection := bunnify.NewConnection()
 	connection.Start()
 
-	consumer, err := connection.NewConsumer(
+	err := connection.NewConsumer(
 		queueName,
 		bunnify.WithQoS(2, 0),
 		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
-		bunnify.WithDeadLetterQueue(deadLetterQueueName),
-	)
+		bunnify.WithDeadLetterQueue(deadLetterQueueName)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	consumer.Consume()
-
-	deadLetterConsumer, err := connection.NewConsumer(
+	err = connection.NewConsumer(
 		deadLetterQueueName,
-		bunnify.WithDefaultHandler(defaultHandler),
-	)
+		bunnify.WithDefaultHandler(defaultHandler)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	deadLetterConsumer.Consume()
 
 	err = connection.NewPublisher().Publish(
 		context.TODO(),
@@ -78,6 +73,10 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond)
+
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Assert
 	if publishedEvent.ID != eventFromDeadLetter.ID {
@@ -107,4 +106,6 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	if routingKey != eventFromDeadLetter.DeliveryInfo.RoutingKey {
 		t.Fatalf("expected routing key %s, got %s", routingKey, eventFromDeadLetter.DeliveryInfo.RoutingKey)
 	}
+
+	goleak.VerifyNone(t)
 }

@@ -2,11 +2,13 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
+	"go.uber.org/goleak"
 )
 
 func TestConsumerPublisher(t *testing.T) {
@@ -30,26 +32,35 @@ func TestConsumerPublisher(t *testing.T) {
 		return nil
 	}
 
+	exitCh := make(chan bool)
+	notificationChannel := make(chan bunnify.Notification)
+	go func() {
+		for {
+			select {
+			case n := <-notificationChannel:
+				fmt.Println(n)
+			case <-exitCh:
+				return
+			}
+		}
+	}()
+
 	// Exercise
 	connection := bunnify.NewConnection(
 		bunnify.WithURI("amqp://localhost:5672"),
 		bunnify.WithReconnectInterval(1*time.Second),
-		bunnify.WithConnectionLogger(bunnify.NewSilentLogger()),
-	)
+		bunnify.WithNotificationChannel(notificationChannel))
+
 	connection.Start()
 
-	consumer, err := connection.NewConsumer(
+	err := connection.NewConsumer(
 		queueName,
 		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
-		bunnify.WithHandler(routingKey, eventHandler),
-		bunnify.WithConsumerLogger(bunnify.NewSilentLogger()),
-	)
+		bunnify.WithHandler(routingKey, eventHandler)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	consumer.Consume()
 
 	err = connection.NewPublisher().Publish(
 		context.TODO(),
@@ -61,6 +72,13 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond)
+
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Stop the notification go routine so goleak does not fail
+	exitCh <- true
 
 	// Assert
 	if publishedEvent.ID != consumedEvent.ID {
@@ -84,4 +102,6 @@ func TestConsumerPublisher(t *testing.T) {
 	if routingKey != consumedEvent.DeliveryInfo.RoutingKey {
 		t.Fatalf("expected routing key %s, got %s", routingKey, consumedEvent.DeliveryInfo.RoutingKey)
 	}
+
+	goleak.VerifyNone(t)
 }
