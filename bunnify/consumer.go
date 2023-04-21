@@ -79,7 +79,8 @@ type Consumer struct {
 }
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
-// As default, if no logger indicated, the channel related messages will be logged in the stdout.
+// Information messages such as channel status will be sent to the notification channel
+// if it was specified on the connection struct.
 // If no QoS is supplied the prefetch count will be of 20.
 func (c *Connection) NewConsumer(
 	queueName string,
@@ -106,10 +107,10 @@ func (c *Connection) NewConsumer(
 
 // Consume will start consuming events for the indicated queue.
 // The first time this function is called it will return error if
-// handlers or default handler are not specified; if queues, exchanges,
-// bindings or qos don't succeed. In case this function gets called
+// handlers or default handler are not specified and also if queues, exchanges,
+// bindings or qos creation don't succeed. In case this function gets called
 // recursively due to channel reconnection, the errors will be pushed to
-// the notification channel (if one has been indicated in the connection)
+// the notification channel (if one has been indicated in the connection).
 func (c Consumer) Consume() error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
