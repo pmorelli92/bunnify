@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
+	"go.uber.org/goleak"
 )
 
 func TestConsumerPublisher(t *testing.T) {
@@ -31,11 +32,16 @@ func TestConsumerPublisher(t *testing.T) {
 		return nil
 	}
 
+	exitCh := make(chan bool)
 	notificationChannel := make(chan bunnify.Notification)
 	go func() {
 		for {
-			n := <-notificationChannel
-			fmt.Println(n)
+			select {
+			case n := <-notificationChannel:
+				fmt.Println(n)
+			case <-exitCh:
+				return
+			}
 		}
 	}()
 
@@ -67,6 +73,13 @@ func TestConsumerPublisher(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Stop the notification go routine so goleak does not fail
+	exitCh <- true
+
 	// Assert
 	if publishedEvent.ID != consumedEvent.ID {
 		t.Fatalf("expected event ID %s, got %s", publishedEvent.ID, consumedEvent.ID)
@@ -89,4 +102,6 @@ func TestConsumerPublisher(t *testing.T) {
 	if routingKey != consumedEvent.DeliveryInfo.RoutingKey {
 		t.Fatalf("expected routing key %s, got %s", routingKey, consumedEvent.DeliveryInfo.RoutingKey)
 	}
+
+	goleak.VerifyNone(t)
 }

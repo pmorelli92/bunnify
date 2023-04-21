@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pmorelli92/bunnify/bunnify"
+	"go.uber.org/goleak"
 )
 
 func TestConsumerShouldReturnErrorWhenNoHandlersSpecified(t *testing.T) {
@@ -19,4 +20,10 @@ func TestConsumerShouldReturnErrorWhenNoHandlersSpecified(t *testing.T) {
 	if err == nil {
 		t.Fatal(err)
 	}
+
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	goleak.VerifyNone(t)
 }
