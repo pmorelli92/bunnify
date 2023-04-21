@@ -47,11 +47,10 @@ type Connection struct {
 
 // NewConnection creates a new AMQP connection using the indicated
 // options. If the consumer does not supply options, it will by default
-// connect to a localhost instance on, try to reconnect every 5 seconds
-// and log connection related messages as json on the stdout.
+// connect to a localhost instance on and try to reconnect every 10 seconds.
 func NewConnection(opts ...func(*connectionOption)) *Connection {
 	options := connectionOption{
-		reconnectInterval: 5 * time.Second,
+		reconnectInterval: 10 * time.Second,
 		uri:               "amqp://localhost:5672",
 	}
 	for _, opt := range opts {
