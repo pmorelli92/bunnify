@@ -79,12 +79,11 @@ type Consumer struct {
 }
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
-// If handlers or default handler are not specified, it will return error.
 // As default, if no logger indicated, the channel related messages will be logged in the stdout.
 // If no QoS is supplied the prefetch count will be of 20.
 func (c *Connection) NewConsumer(
 	queueName string,
-	opts ...func(*consumerOption)) (Consumer, error) {
+	opts ...func(*consumerOption)) Consumer {
 
 	options := consumerOption{
 		notificationCh: c.options.notificationChannel,
@@ -96,20 +95,21 @@ func (c *Connection) NewConsumer(
 		opt(&options)
 	}
 
-	if options.defaultHandler == nil && len(options.handlers) == 0 {
-		return Consumer{}, fmt.Errorf("no handlers specified")
-	}
-
 	return Consumer{
 		queueName: queueName,
 		options:   options,
 		getNewChannel: func() (*amqp.Channel, bool) {
-			return c.getNewChannel(NotificationProducerConsumer)
+			return c.getNewChannel(NotificationSourceConsumer)
 		},
-	}, nil
+	}
 }
 
 // Consume will start consuming events for the indicated queue.
+// The first time this function is called it will return error if
+// handlers or default handler are not specified; if queues, exchanges,
+// bindings or qos don't succeed. In case this function gets called
+// recursively due to channel reconnection, the errors will be pushed to
+// the notification channel (if one has been indicated in the connection)
 func (c Consumer) Consume() error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
@@ -117,6 +117,10 @@ func (c Consumer) Consume() error {
 	}
 
 	if !c.initialized {
+		if c.options.defaultHandler == nil && len(c.options.handlers) == 0 {
+			return fmt.Errorf("no handlers specified")
+		}
+
 		if err := c.createExchanges(channel); err != nil {
 			return fmt.Errorf("failed to declare exchange: %w", err)
 		}
@@ -164,21 +168,13 @@ func (c Consumer) Consume() error {
 			}
 
 			if err := handler(context.TODO(), uevt); err != nil {
-				sendError(
-					c.options.notificationCh,
-					NotificationProducerConsumer,
-					fmt.Sprintf("event handler for %s failed with: %s", delivery.RoutingKey, err.Error()))
-
+				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
 				_ = delivery.Nack(false, false)
 				continue
 			}
 
-			elapsed := time.Since(startTime)
-			sendInfo(
-				c.options.notificationCh,
-				NotificationProducerConsumer,
-				fmt.Sprintf("event handler for %s succeeded, took %d milliseconds", delivery.RoutingKey, elapsed.Milliseconds()))
-
+			elapsed := time.Since(startTime).Milliseconds()
+			notifyEventHandlerSucceed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed)
 			_ = delivery.Ack(false)
 		}
 
@@ -186,17 +182,10 @@ func (c Consumer) Consume() error {
 			channel.Close()
 		}
 
-		sendError(
-			c.options.notificationCh,
-			NotificationProducerConsumer,
-			channelConnectionLost)
+		notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
 
-		err = c.Consume()
-		if err != nil {
-			sendError(
-				c.options.notificationCh,
-				NotificationProducerConsumer,
-				err.Error())
+		if err = c.Consume(); err != nil {
+			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 		}
 	}()
 

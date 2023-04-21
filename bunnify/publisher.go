@@ -18,7 +18,7 @@ type Publisher struct {
 func (c *Connection) NewPublisher() *Publisher {
 	return &Publisher{
 		getNewChannel: func() (*amqp.Channel, bool) {
-			return c.getNewChannel(NotificationProducerPublisher)
+			return c.getNewChannel(NotificationSourcePublisher)
 		},
 	}
 }
@@ -33,7 +33,7 @@ func (p *Publisher) Publish(
 	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
 		channel, connectionClosed := p.getNewChannel()
 		if connectionClosed {
-			return fmt.Errorf(connectionClosedBySystem)
+			return fmt.Errorf("connection closed by system, channel will not reconnect")
 		}
 		p.inUseChannel = channel
 	}

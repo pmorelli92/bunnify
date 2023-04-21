@@ -10,9 +10,10 @@ func TestConsumerShouldReturnErrorWhenNoHandlersSpecified(t *testing.T) {
 	// Setup
 	connection := bunnify.NewConnection()
 	connection.Start()
+	consumer := connection.NewConsumer("queueName")
 
 	// Exercise
-	_, err := connection.NewConsumer("queueName")
+	err := consumer.Consume()
 
 	// Assert
 	if err == nil {

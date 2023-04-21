@@ -2,12 +2,12 @@ package bunnify
 
 import "fmt"
 
-type NotificationProducer string
+type NotificationSource string
 
 const (
-	NotificationProducerConnection NotificationProducer = "CONNECTION"
-	NotificationProducerConsumer   NotificationProducer = "CONSUMER"
-	NotificationProducerPublisher  NotificationProducer = "PUBLISHER"
+	NotificationSourceConnection NotificationSource = "CONNECTION"
+	NotificationSourceConsumer   NotificationSource = "CONSUMER"
+	NotificationSourcePublisher  NotificationSource = "PUBLISHER"
 )
 
 type NotificationType string
@@ -18,31 +18,111 @@ const (
 )
 
 type Notification struct {
-	Message  string
-	Type     NotificationType
-	Producer NotificationProducer
+	Message string
+	Type    NotificationType
+	Source  NotificationSource
 }
 
 func (n Notification) String() string {
-	return fmt.Sprintf("[%s][%s] %s", n.Type, n.Producer, n.Message)
+	return fmt.Sprintf("[%s][%s] %s", n.Type, n.Source, n.Message)
 }
 
-func sendError(ch chan<- Notification, producer NotificationProducer, message string) {
+func notifyConnectionEstablished(ch chan<- Notification) {
 	if ch != nil {
 		ch <- Notification{
-			Message:  message,
-			Producer: producer,
-			Type:     NotificationTypeError,
+			Type:    NotificationTypeInfo,
+			Message: "established connection to server",
+			Source:  NotificationSourceConnection,
 		}
 	}
 }
 
-func sendInfo(ch chan<- Notification, producer NotificationProducer, message string) {
+func notifyConnectionLost(ch chan<- Notification) {
 	if ch != nil {
 		ch <- Notification{
-			Message:  message,
-			Producer: producer,
-			Type:     NotificationTypeInfo,
+			Type:    NotificationTypeError,
+			Message: "lost connection to server, will attempt to reconnect",
+			Source:  NotificationSourceConnection,
+		}
+	}
+}
+
+func notifyConnectionFailed(ch chan<- Notification, err error) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeError,
+			Message: fmt.Sprintf("failed to connect to server, error %s", err),
+			Source:  NotificationSourceConnection,
+		}
+	}
+}
+
+func notifyClosingConnection(ch chan<- Notification) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeInfo,
+			Message: "closing connection to server",
+			Source:  NotificationSourceConnection,
+		}
+	}
+}
+
+func notifyConnectionClosedBySystem(ch chan<- Notification) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeInfo,
+			Message: "connection closed by system, channel will not reconnect",
+			Source:  NotificationSourceConnection,
+		}
+	}
+}
+
+func notifyChannelEstablished(ch chan<- Notification, source NotificationSource) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeInfo,
+			Message: "established connection to channel",
+			Source:  source,
+		}
+	}
+}
+
+func notifyChannelLost(ch chan<- Notification, source NotificationSource) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeError,
+			Message: "lost connection to channel, will attempt to reconnect",
+			Source:  source,
+		}
+	}
+}
+
+func notifyChannelFailed(ch chan<- Notification, source NotificationSource, err error) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeError,
+			Message: fmt.Sprintf("failed to connect to channel, error %s", err),
+			Source:  source,
+		}
+	}
+}
+
+func notifyEventHandlerSucceed(ch chan<- Notification, routingKey string, took int64) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeInfo,
+			Message: fmt.Sprintf("event handler for %s succeeded, took %d milliseconds", routingKey, took),
+			Source:  NotificationSourceConsumer,
+		}
+	}
+}
+
+func notifyEventHandlerFailed(ch chan<- Notification, routingKey string, err error) {
+	if ch != nil {
+		ch <- Notification{
+			Type:    NotificationTypeError,
+			Message: fmt.Sprintf("event handler for %s failed, error: %s", routingKey, err),
+			Source:  NotificationSourceConsumer,
 		}
 	}
 }

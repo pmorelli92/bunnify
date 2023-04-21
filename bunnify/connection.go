@@ -1,7 +1,6 @@
 package bunnify
 
 import (
-	"fmt"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -75,28 +74,17 @@ func (c *Connection) Start() {
 			break
 		}
 
-		sendError(
-			c.options.notificationChannel,
-			NotificationProducerConnection,
-			fmt.Sprintf(serverConnectionFailed, err))
-
+		notifyConnectionFailed(c.options.notificationChannel, err)
 		<-ticker.C
 	}
 
 	c.connection = conn
-	sendInfo(
-		c.options.notificationChannel,
-		NotificationProducerConnection,
-		serverConnectionEstablished)
+	notifyConnectionEstablished(c.options.notificationChannel)
 
 	go func() {
 		<-conn.NotifyClose(make(chan *amqp.Error))
 		if !c.connectionClosedBySystem {
-			sendError(
-				c.options.notificationChannel,
-				NotificationProducerConnection,
-				serverConnectionLost)
-
+			notifyConnectionLost(c.options.notificationChannel)
 			c.Start()
 		}
 	}()
@@ -106,22 +94,15 @@ func (c *Connection) Start() {
 func (c *Connection) Close() error {
 	c.connectionClosedBySystem = true
 	if c.connection != nil {
-		sendInfo(
-			c.options.notificationChannel,
-			NotificationProducerConnection,
-			serverClosingConnection)
-
+		notifyClosingConnection(c.options.notificationChannel)
 		return c.connection.Close()
 	}
 	return nil
 }
 
-func (c *Connection) getNewChannel(producer NotificationProducer) (*amqp.Channel, bool) {
+func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, bool) {
 	if c.connectionClosedBySystem {
-		sendInfo(
-			c.options.notificationChannel,
-			producer,
-			connectionClosedBySystem)
+		notifyConnectionClosedBySystem(c.options.notificationChannel)
 		return nil, true
 	}
 
@@ -135,18 +116,10 @@ func (c *Connection) getNewChannel(producer NotificationProducer) (*amqp.Channel
 			break
 		}
 
-		sendError(
-			c.options.notificationChannel,
-			producer,
-			fmt.Sprintf(channelConnectionFailed, err))
-
+		notifyChannelFailed(c.options.notificationChannel, source, err)
 		<-ticker.C
 	}
 
-	sendInfo(
-		c.options.notificationChannel,
-		producer,
-		channelConnectionEstablished)
-
+	notifyChannelEstablished(c.options.notificationChannel, source)
 	return ch, false
 }

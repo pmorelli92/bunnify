@@ -47,16 +47,11 @@ func TestConsumerPublisher(t *testing.T) {
 
 	connection.Start()
 
-	consumer, err := connection.NewConsumer(
+	err := connection.NewConsumer(
 		queueName,
 		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
-		bunnify.WithHandler(routingKey, eventHandler))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = consumer.Consume()
+		bunnify.WithHandler(routingKey, eventHandler)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}

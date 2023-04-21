@@ -45,28 +45,22 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	connection := bunnify.NewConnection()
 	connection.Start()
 
-	consumer, err := connection.NewConsumer(
+	err := connection.NewConsumer(
 		queueName,
 		bunnify.WithQoS(2, 0),
 		bunnify.WithBindingToExchange(exchangeName),
 		bunnify.WithHandler(routingKey, eventHandler),
-		bunnify.WithDeadLetterQueue(deadLetterQueueName),
-	)
+		bunnify.WithDeadLetterQueue(deadLetterQueueName)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	consumer.Consume()
-
-	deadLetterConsumer, err := connection.NewConsumer(
+	err = connection.NewConsumer(
 		deadLetterQueueName,
-		bunnify.WithDefaultHandler(defaultHandler),
-	)
+		bunnify.WithDefaultHandler(defaultHandler)).Consume()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	deadLetterConsumer.Consume()
 
 	err = connection.NewPublisher().Publish(
 		context.TODO(),
