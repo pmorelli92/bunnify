@@ -56,6 +56,8 @@ You can find working examples under the `tests` folder.
 ### Consumer
 
 ```go
+package main
+
 import (
 	"context"
 	"encoding/json"
