@@ -53,7 +53,11 @@ Things I want to do:
 
 You can find working examples under the `tests` folder.
 
-### Consumer
+https://github.com/pmorelli92/bunnify/blob/3abb5d999ebd68f3eae822631bb83f436630c228/tests/consumer_publish_test.go#L49-L63
+
+
+
+https://github.com/pmorelli92/bunnify/blob/3abb5d999ebd68f3eae822631bb83f436630c228/tests/consumer_publish_test.go?plain=1#L49-L63
 
 ```go
 package main
