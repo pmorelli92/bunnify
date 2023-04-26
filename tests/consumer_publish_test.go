@@ -60,8 +60,9 @@ func TestConsumerPublisher(t *testing.T) {
 
 	publisher := connection.NewPublisher()
 
+	orderCreatedID := uuid.NewString()
 	eventToPublish := bunnify.NewPublishableEvent(orderCreated{
-		ID: uuid.NewString(),
+		ID: orderCreatedID,
 	})
 
 	err := publisher.Publish(context.TODO(), exchangeName, routingKey, eventToPublish)
@@ -88,8 +89,8 @@ func TestConsumerPublisher(t *testing.T) {
 	if !eventToPublish.Timestamp.Equal(consumedEvent.Timestamp) {
 		t.Fatalf("expected timestamp %s, got %s", eventToPublish.Timestamp, consumedEvent.Timestamp)
 	}
-	if eventToPublish.ID != consumedEvent.Payload.ID {
-		t.Fatalf("expected order created ID %s, got %s", eventToPublish.ID, consumedEvent.Payload.ID)
+	if orderCreatedID != consumedEvent.Payload.ID {
+		t.Fatalf("expected order created ID %s, got %s", orderCreatedID, consumedEvent.Payload.ID)
 	}
 	if exchangeName != consumedEvent.DeliveryInfo.Exchange {
 		t.Fatalf("expected exchange %s, got %s", exchangeName, consumedEvent.DeliveryInfo.Exchange)
