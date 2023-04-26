@@ -28,7 +28,6 @@ Bunnify is a library for publishing and consuming events for AMQP.
 - `github.com/rabbitmq/amqp091-go`: Handles the connection with AMQP protocol.
 - `github.com/google/uuid`: Generates UUID for events ID and correlation ID.
 - `go.uber.org/goleak`: Used on tests to verify that there are no leaks of routines on the handling of channels.
-- Something Prometheus.
 
 ## Motivation
 
@@ -38,125 +37,34 @@ Some developers are often spoiled with these as they provide a good dev experien
 
 Bunnify aims to provide a flexible and adaptable solution that can be used in a variety of environments and scenarios. By abstracting away many of the technical details of AMQP publishing and consumption, Bunnify makes it easy to get started with event-driven architecture without needing to be an AMQP expert.
 
-## Experimental
+## What is next the come
 
-Important Note: Bunnify is currently in an early stage of development. This means that the API may change substantially in the coming weeks.
+- Support for exposing Prometheus metrics.
 
-I encourage you to test Bunnify thoroughly in a development or staging environment before using it in a real work environment. This will allow you to become familiar with its features and limitations, and help me identify any issues that may arise.
+## Examples
 
-Things I want to do:
+You can find all the working examples under the `tests` folder.
 
-1. Support for metrics.
-2. Support for open telemetry.
+### Consumer
 
-## Example
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/consumer_publish_test.go#L38-L59
 
-You can find working examples under the `tests` folder.
+### Dead letter consumer
 
-https://github.com/pmorelli92/bunnify/blob/3abb5d999ebd68f3eae822631bb83f436630c228/tests/consumer_publish_test.go#L49-L63
-
-
-
-https://github.com/pmorelli92/bunnify/blob/3abb5d999ebd68f3eae822631bb83f436630c228/tests/consumer_publish_test.go?plain=1#L49-L63
-
-```go
-package main
-
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"log"
-	"sync"
-
-	"github.com/pmorelli92/bunnify/bunnify"
-)
-
-func main() {
-	connection := bunnify.NewConnection()
-	connection.Start()
-
-	consumer := connection.NewConsumer(
-		"queue1",
-		bunnify.WithBindingToExchange("exchange1"),
-		bunnify.WithHandler("catCreated", HandleCatCreated),
-		bunnify.WithHandler("personCreated", HandlePersonCreated),
-		bunnify.WithDeadLetterQueue("dead-queue"))
-
-	if err := consumer.Consume(); err != nil {
-		log.Fatal(err)
-	}
-
-	deadLetterConsumer := connection.NewConsumer(
-		"dead-queue",
-		bunnify.WithDefaultHandler(HandleDefault))
-
-	if err := deadLetterConsumer.Consume(); err != nil {
-		log.Fatal(err)
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
-}
-
-func HandleDefault(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
-	return nil
-}
-
-type personCreated struct {
-	Name string `json:"name"`
-}
-
-func HandlePersonCreated(ctx context.Context, event bunnify.ConsumableEvent[personCreated]) error {
-	fmt.Println("Event ID: " + event.ID)
-	fmt.Println("Correlation ID: " + event.CorrelationID)
-	fmt.Println("Timestamp: " + event.Timestamp.Format(time.DateTime))
-	fmt.Println("Person created with name: " + event.Payload.Name)
-	return nil
-}
-
-type catCreated struct {
-	Years int `json:"years"`
-}
-
-func HandleCatCreated(ctx context.Context, event bunnify.ConsumableEvent[catCreated]) error {
-	fmt.Println("Event ID: " + event.ID)
-	fmt.Println("Correlation ID: " + event.CorrelationID)
-	fmt.Println("Timestamp: " + event.Timestamp.Format(time.DateTime))
-	fmt.Println("Cat created with years: " + fmt.Sprint(event.Payload.Years))
-	return nil
-}
-```
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/dead_letter_receives_event_test.go#L46-L66
 
 ### Publisher
 
-```go
-package main
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/consumer_publish_test.go#L61-L71
 
-import (
-	"context"
-	"log"
+## Configuration
 
-	"github.com/pmorelli92/bunnify/bunnify"
-)
+Both the connection and consumer structs can be configured with the typical functional options. You can find the options below:
 
-func main() {
-	c := bunnify.NewConnection()
-	c.Start()
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/connection.go#L15-L37
 
-	publisher := c.NewPublisher()
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/consumer.go#L24-L71
 
-	event := bunnify.NewPublishableEvent(catCreated{
-		Years: 22,
-	})
+When publishing an event, you can override the event or the correlation ID if you need. This is also achievable with options:
 
-	if err := publisher.Publish(context.TODO(), "exchange1", "catCreated", event); err != nil {
-		log.Fatal(err)
-	}
-}
-
-type catCreated struct {
-	Years int `json:"years"`
-}
-```
+https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/publishableEvent.go#L22-L36
