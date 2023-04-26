@@ -37,7 +37,7 @@ Some developers are often spoiled with these as they provide a good dev experien
 
 Bunnify aims to provide a flexible and adaptable solution that can be used in a variety of environments and scenarios. By abstracting away many of the technical details of AMQP publishing and consumption, Bunnify makes it easy to get started with event-driven architecture without needing to be an AMQP expert.
 
-## What is next the come
+## What is next to come
 
 - Support for exposing Prometheus metrics.
 
