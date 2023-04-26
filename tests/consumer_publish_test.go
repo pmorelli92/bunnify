@@ -21,17 +21,6 @@ func TestConsumerPublisher(t *testing.T) {
 		ID string `json:"id"`
 	}
 
-	publishedOrderCreated := orderCreated{
-		ID: uuid.NewString(),
-	}
-	publishedEvent := bunnify.NewPublishableEvent(publishedOrderCreated)
-
-	var consumedEvent bunnify.ConsumableEvent[orderCreated]
-	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
-		consumedEvent = event
-		return nil
-	}
-
 	exitCh := make(chan bool)
 	notificationChannel := make(chan bunnify.Notification)
 	go func() {
@@ -53,20 +42,29 @@ func TestConsumerPublisher(t *testing.T) {
 
 	connection.Start()
 
-	err := connection.NewConsumer(
+	var consumedEvent bunnify.ConsumableEvent[orderCreated]
+	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
+		consumedEvent = event
+		return nil
+	}
+
+	consumer := connection.NewConsumer(
 		queueName,
 		bunnify.WithQuorumQueue(),
 		bunnify.WithBindingToExchange(exchangeName),
-		bunnify.WithHandler(routingKey, eventHandler)).Consume()
-	if err != nil {
+		bunnify.WithHandler(routingKey, eventHandler))
+
+	if err := consumer.Consume(); err != nil {
 		t.Fatal(err)
 	}
 
-	err = connection.NewPublisher().Publish(
-		context.TODO(),
-		exchangeName,
-		routingKey,
-		publishedEvent)
+	publisher := connection.NewPublisher()
+
+	eventToPublish := bunnify.NewPublishableEvent(orderCreated{
+		ID: uuid.NewString(),
+	})
+
+	err := publisher.Publish(context.TODO(), exchangeName, routingKey, eventToPublish)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,17 +79,17 @@ func TestConsumerPublisher(t *testing.T) {
 	exitCh <- true
 
 	// Assert
-	if publishedEvent.ID != consumedEvent.ID {
-		t.Fatalf("expected event ID %s, got %s", publishedEvent.ID, consumedEvent.ID)
+	if eventToPublish.ID != consumedEvent.ID {
+		t.Fatalf("expected event ID %s, got %s", eventToPublish.ID, consumedEvent.ID)
 	}
-	if publishedEvent.CorrelationID != consumedEvent.CorrelationID {
-		t.Fatalf("expected correlation ID %s, got %s", publishedEvent.CorrelationID, consumedEvent.CorrelationID)
+	if eventToPublish.CorrelationID != consumedEvent.CorrelationID {
+		t.Fatalf("expected correlation ID %s, got %s", eventToPublish.CorrelationID, consumedEvent.CorrelationID)
 	}
-	if !publishedEvent.Timestamp.Equal(consumedEvent.Timestamp) {
-		t.Fatalf("expected timestamp %s, got %s", publishedEvent.Timestamp, consumedEvent.Timestamp)
+	if !eventToPublish.Timestamp.Equal(consumedEvent.Timestamp) {
+		t.Fatalf("expected timestamp %s, got %s", eventToPublish.Timestamp, consumedEvent.Timestamp)
 	}
-	if publishedOrderCreated.ID != consumedEvent.Payload.ID {
-		t.Fatalf("expected order created ID %s, got %s", publishedOrderCreated.ID, consumedEvent.Payload.ID)
+	if eventToPublish.ID != consumedEvent.Payload.ID {
+		t.Fatalf("expected order created ID %s, got %s", eventToPublish.ID, consumedEvent.Payload.ID)
 	}
 	if exchangeName != consumedEvent.DeliveryInfo.Exchange {
 		t.Fatalf("expected exchange %s, got %s", exchangeName, consumedEvent.DeliveryInfo.Exchange)
