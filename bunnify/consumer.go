@@ -163,7 +163,6 @@ func (c Consumer) Consume() error {
 
 			uevt := unmarshalEvent{DeliveryInfo: deliveryInfo}
 			if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
-				fmt.Println(err)
 				_ = delivery.Nack(false, false)
 				continue
 			}
@@ -195,9 +194,10 @@ func (c Consumer) Consume() error {
 
 func getDeliveryInfo(queueName string, delivery amqp.Delivery) DeliveryInfo {
 	deliveryInfo := DeliveryInfo{
-		Queue:      queueName,
-		Exchange:   delivery.Exchange,
-		RoutingKey: delivery.RoutingKey,
+		Queue:       queueName,
+		Exchange:    delivery.Exchange,
+		RoutingKey:  delivery.RoutingKey,
+		AMQPHeaders: delivery.Headers,
 	}
 
 	// If routing key is empty, it is mostly due to the event being dead lettered.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/pmorelli92/bunnify/bunnify"
+	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/goleak"
 )
 
@@ -65,7 +66,16 @@ func TestConsumerPublisher(t *testing.T) {
 		ID: orderCreatedID,
 	})
 
-	err := publisher.Publish(context.TODO(), exchangeName, routingKey, eventToPublish)
+	err := publisher.Publish(
+		context.TODO(),
+		exchangeName,
+		routingKey,
+		eventToPublish,
+		func(p *amqp091.Publishing) {
+			p.Headers = map[string]any{
+				"h-name": "h-value",
+			}
+		})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,6 +110,9 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 	if routingKey != consumedEvent.DeliveryInfo.RoutingKey {
 		t.Fatalf("expected routing key %s, got %s", routingKey, consumedEvent.DeliveryInfo.RoutingKey)
+	}
+	if "h-value" != consumedEvent.DeliveryInfo.AMQPHeaders["h-name"] {
+		t.Fatalf("expected header value is %s, got %s", "h-value", consumedEvent.DeliveryInfo.AMQPHeaders["h-name"])
 	}
 
 	goleak.VerifyNone(t)

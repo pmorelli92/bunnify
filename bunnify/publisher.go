@@ -28,7 +28,8 @@ func (c *Connection) NewPublisher() *Publisher {
 func (p *Publisher) Publish(
 	ctx context.Context,
 	exchange, routingKey string,
-	event PublishableEvent) error {
+	event PublishableEvent,
+	interceptors ...func(*amqp.Publishing)) error {
 
 	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
 		channel, connectionClosed := p.getNewChannel()
@@ -43,11 +44,17 @@ func (p *Publisher) Publish(
 		return fmt.Errorf("could not marshal event: %w", err)
 	}
 
-	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, amqp.Publishing{
+	publishing := amqp.Publishing{
 		ContentEncoding: "application/json",
 		CorrelationId:   event.CorrelationID,
 		MessageId:       event.ID,
 		Timestamp:       event.Timestamp,
 		Body:            b,
-	})
+	}
+
+	for _, i := range interceptors {
+		i(&publishing)
+	}
+
+	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
 }
