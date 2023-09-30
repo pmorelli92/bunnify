@@ -22,18 +22,14 @@ func TestConsumerPublisherTracing(t *testing.T) {
 	// Setup amqp
 	queueName := uuid.NewString()
 	exchangeName := uuid.NewString()
-	routingKey := "order.orderCreated"
-
-	type orderCreated struct {
-		ID string `json:"id"`
-	}
+	routingKey := uuid.NewString()
 
 	connection := bunnify.NewConnection()
 	connection.Start()
 
 	// Exercise consuming
 	var actualTraceID trace.TraceID
-	eventHandler := func(ctx context.Context, _ bunnify.ConsumableEvent[orderCreated]) error {
+	eventHandler := func(ctx context.Context, _ bunnify.ConsumableEvent[any]) error {
 		actualTraceID = trace.SpanFromContext(ctx).SpanContext().TraceID()
 		return nil
 	}
@@ -54,9 +50,7 @@ func TestConsumerPublisherTracing(t *testing.T) {
 		publishingContext,
 		exchangeName,
 		routingKey,
-		bunnify.NewPublishableEvent(orderCreated{
-			ID: uuid.NewString(),
-		}))
+		bunnify.NewPublishableEvent(struct{}{}))
 	if err != nil {
 		t.Fatal(err)
 	}
