@@ -14,10 +14,9 @@ type Metadata struct {
 
 // DeliveryInfo holds information of original queue, exchange and routing keys.
 type DeliveryInfo struct {
-	Queue       string
-	Exchange    string
-	RoutingKey  string
-	AMQPHeaders map[string]any
+	Queue      string
+	Exchange   string
+	RoutingKey string
 }
 
 // ConsumableEvent[T] represents an event that can be consumed.

@@ -1,7 +1,6 @@
 package bunnify
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -167,7 +166,8 @@ func (c Consumer) Consume() error {
 				continue
 			}
 
-			if err := handler(context.TODO(), uevt); err != nil {
+			tracingCtx := extractAMQPHeaders(delivery.Headers)
+			if err := handler(tracingCtx, uevt); err != nil {
 				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
 				_ = delivery.Nack(false, false)
 				continue
@@ -194,10 +194,9 @@ func (c Consumer) Consume() error {
 
 func getDeliveryInfo(queueName string, delivery amqp.Delivery) DeliveryInfo {
 	deliveryInfo := DeliveryInfo{
-		Queue:       queueName,
-		Exchange:    delivery.Exchange,
-		RoutingKey:  delivery.RoutingKey,
-		AMQPHeaders: delivery.Headers,
+		Queue:      queueName,
+		Exchange:   delivery.Exchange,
+		RoutingKey: delivery.RoutingKey,
 	}
 
 	// If routing key is empty, it is mostly due to the event being dead lettered.
