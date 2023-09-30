@@ -23,13 +23,17 @@ func (c *Connection) NewPublisher() *Publisher {
 	}
 }
 
+// Interceptor is used for modifying the underlying amqp.Publishing
+// before it is sent. This allows the developer to add/modify headers and others.
+type Interceptor func(*amqp.Publishing)
+
 // Publish publishes an event to the specified exchange.
 // If the channel is closed, it will retry until a channel is obtained.
 func (p *Publisher) Publish(
 	ctx context.Context,
 	exchange, routingKey string,
 	event PublishableEvent,
-	interceptors ...func(*amqp.Publishing)) error {
+	interceptors ...Interceptor) error {
 
 	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
 		channel, connectionClosed := p.getNewChannel()
