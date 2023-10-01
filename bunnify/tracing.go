@@ -8,6 +8,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+// inject the span context to amqp table
 func injectToHeaders(ctx context.Context) amqp.Table {
 	carrier := propagation.MapCarrier{}
 	otel.GetTextMapPropagator().Inject(ctx, carrier)
@@ -19,6 +20,7 @@ func injectToHeaders(ctx context.Context) amqp.Table {
 	return header
 }
 
+// extract the amqp table to a span context
 func extractToContext(headers amqp.Table) context.Context {
 	carrier := propagation.MapCarrier{}
 	for k, v := range headers {
