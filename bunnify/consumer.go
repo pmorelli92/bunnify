@@ -166,7 +166,7 @@ func (c Consumer) Consume() error {
 				continue
 			}
 
-			tracingCtx := extractAMQPHeaders(delivery.Headers)
+			tracingCtx := extractToContext(delivery.Headers)
 			if err := handler(tracingCtx, uevt); err != nil {
 				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
 				_ = delivery.Nack(false, false)

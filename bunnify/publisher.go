@@ -49,7 +49,7 @@ func (p *Publisher) Publish(
 		MessageId:       event.ID,
 		Timestamp:       event.Timestamp,
 		Body:            b,
-		Headers:         injectAMQPHeaders(ctx),
+		Headers:         injectToHeaders(ctx),
 	}
 
 	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
