@@ -11,7 +11,7 @@ import (
 	"go.uber.org/goleak"
 )
 
-func TestGoRoutinesAreNotLeaded(t *testing.T) {
+func TestGoRoutinesAreNotLeaked(t *testing.T) {
 	// Setup
 	ticker := time.NewTicker(2 * time.Second)
 	connection := bunnify.NewConnection()

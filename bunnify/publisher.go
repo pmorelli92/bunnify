@@ -52,5 +52,12 @@ func (p *Publisher) Publish(
 		Headers:         injectToHeaders(ctx),
 	}
 
-	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
+	err = p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
+	if err != nil {
+		EventPublishFailed(exchange, routingKey)
+		return err
+	}
+
+	EventPublishSucceed(exchange, routingKey)
+	return nil
 }

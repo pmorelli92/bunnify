@@ -149,33 +149,41 @@ func (c Consumer) Consume() error {
 		for delivery := range deliveries {
 			startTime := time.Now()
 			deliveryInfo := getDeliveryInfo(c.queueName, delivery)
+			EventReceived(c.queueName, deliveryInfo.RoutingKey)
 
 			// Establish which handler is invoked
 			handler, ok := c.options.handlers[deliveryInfo.RoutingKey]
 			if !ok {
 				if c.options.defaultHandler == nil {
 					_ = delivery.Nack(false, false)
+					EventWithoutHandler(c.queueName, deliveryInfo.RoutingKey)
 					continue
 				}
 				handler = c.options.defaultHandler
 			}
 
 			uevt := unmarshalEvent{DeliveryInfo: deliveryInfo}
+
+			// For this error to happen an event not published by Bunnify is required
 			if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
 				_ = delivery.Nack(false, false)
+				EventNotParsable(c.queueName, deliveryInfo.RoutingKey)
 				continue
 			}
 
 			tracingCtx := extractToContext(delivery.Headers)
 			if err := handler(tracingCtx, uevt); err != nil {
-				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
+				elapsed := time.Since(startTime).Milliseconds()
+				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
 				_ = delivery.Nack(false, false)
+				EventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
 				continue
 			}
 
 			elapsed := time.Since(startTime).Milliseconds()
 			notifyEventHandlerSucceed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed)
 			_ = delivery.Ack(false)
+			EventAck(c.queueName, deliveryInfo.RoutingKey, elapsed)
 		}
 
 		if !channel.IsClosed() {
