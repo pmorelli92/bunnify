@@ -17,7 +17,7 @@ import (
 func TestConsumerPublisherTracing(t *testing.T) {
 	// Setup tracing
 	otel.SetTracerProvider(tracesdk.NewTracerProvider())
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	// Setup amqp
 	queueName := uuid.NewString()
