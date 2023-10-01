@@ -1,73 +1,11 @@
 package bunnify
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
-
-type consumerOption struct {
-	deadLetterQueue string
-	exchange        string
-	defaultHandler  wrappedHandler
-	handlers        map[string]wrappedHandler
-	prefetchCount   int
-	prefetchSize    int
-	quorumQueue     bool
-	notificationCh  chan<- Notification
-}
-
-// WithBindingToExchange specifies the exchange on which the queue
-// will bind for the handlers provided.
-func WithBindingToExchange(exchange string) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.exchange = exchange
-	}
-}
-
-// WithQoS specifies the prefetch count and size for the consumer.
-func WithQoS(prefetchCount, prefetchSize int) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.prefetchCount = prefetchCount
-		opt.prefetchSize = prefetchSize
-	}
-}
-
-// WithQuorumQueue specifies that the queue to consume will be created as quorum queue.
-// Quorum queues are used when data safety is the priority.
-func WithQuorumQueue() func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.quorumQueue = true
-	}
-}
-
-// WithDeadLetterQueue indicates which queue will receive the events
-// that were NACKed for this consumer.
-func WithDeadLetterQueue(queueName string) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.deadLetterQueue = queueName
-	}
-}
-
-// WithDefaultHandler specifies a handler that can be use for any type
-// of routing key without a defined handler. This is mostly convenient if you
-// don't care about the specific payload of the event, which will be received as a byte array.
-func WithDefaultHandler(handler EventHandler[json.RawMessage]) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.defaultHandler = newWrappedHandler(handler)
-	}
-}
-
-// WithHandler specifies under which routing key the provided handler will be invoked.
-// The routing key indicated here will be bound to the queue if the WithBindingToExchange is supplied.
-func WithHandler[T any](routingKey string, handler EventHandler[T]) func(*consumerOption) {
-	return func(opt *consumerOption) {
-		opt.handlers[routingKey] = newWrappedHandler(handler)
-	}
-}
 
 // Consumer is used for consuming to events from an specified queue.
 type Consumer struct {
@@ -145,58 +83,7 @@ func (c Consumer) Consume() error {
 		return fmt.Errorf("failed to establish consuming from queue: %w", err)
 	}
 
-	go func() {
-		for delivery := range deliveries {
-			startTime := time.Now()
-			deliveryInfo := getDeliveryInfo(c.queueName, delivery)
-			EventReceived(c.queueName, deliveryInfo.RoutingKey)
-
-			// Establish which handler is invoked
-			handler, ok := c.options.handlers[deliveryInfo.RoutingKey]
-			if !ok {
-				if c.options.defaultHandler == nil {
-					_ = delivery.Nack(false, false)
-					EventWithoutHandler(c.queueName, deliveryInfo.RoutingKey)
-					continue
-				}
-				handler = c.options.defaultHandler
-			}
-
-			uevt := unmarshalEvent{DeliveryInfo: deliveryInfo}
-
-			// For this error to happen an event not published by Bunnify is required
-			if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
-				_ = delivery.Nack(false, false)
-				EventNotParsable(c.queueName, deliveryInfo.RoutingKey)
-				continue
-			}
-
-			tracingCtx := extractToContext(delivery.Headers)
-			if err := handler(tracingCtx, uevt); err != nil {
-				elapsed := time.Since(startTime).Milliseconds()
-				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
-				_ = delivery.Nack(false, false)
-				EventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
-				continue
-			}
-
-			elapsed := time.Since(startTime).Milliseconds()
-			notifyEventHandlerSucceed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed)
-			_ = delivery.Ack(false)
-			EventAck(c.queueName, deliveryInfo.RoutingKey, elapsed)
-		}
-
-		if !channel.IsClosed() {
-			channel.Close()
-		}
-
-		notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
-
-		if err = c.Consume(); err != nil {
-			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
-		}
-	}()
-
+	go c.loop(channel, deliveries)
 	return nil
 }
 
