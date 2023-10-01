@@ -65,7 +65,11 @@ func TestConsumerPublisher(t *testing.T) {
 		ID: orderCreatedID,
 	})
 
-	err := publisher.Publish(context.TODO(), exchangeName, routingKey, eventToPublish)
+	err := publisher.Publish(
+		context.TODO(),
+		exchangeName,
+		routingKey,
+		eventToPublish)
 	if err != nil {
 		t.Fatal(err)
 	}

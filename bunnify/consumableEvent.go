@@ -23,8 +23,8 @@ type DeliveryInfo struct {
 // The type parameter T specifies the type of the event's payload.
 type ConsumableEvent[T any] struct {
 	Metadata
-	DeliveryInfo
-	Payload T
+	DeliveryInfo DeliveryInfo
+	Payload      T
 }
 
 // unmarshalEvent is used internally to unmarshal a PublishableEvent
@@ -32,6 +32,6 @@ type ConsumableEvent[T any] struct {
 // so that later the json.RawMessage can be unmarshal to ConsumableEvent[T].Payload.
 type unmarshalEvent struct {
 	Metadata
-	DeliveryInfo
-	Payload json.RawMessage `json:"payload"`
+	DeliveryInfo DeliveryInfo
+	Payload      json.RawMessage `json:"payload"`
 }

@@ -43,11 +43,14 @@ func (p *Publisher) Publish(
 		return fmt.Errorf("could not marshal event: %w", err)
 	}
 
-	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, amqp.Publishing{
+	publishing := amqp.Publishing{
 		ContentEncoding: "application/json",
 		CorrelationId:   event.CorrelationID,
 		MessageId:       event.ID,
 		Timestamp:       event.Timestamp,
 		Body:            b,
-	})
+		Headers:         injectToHeaders(ctx),
+	}
+
+	return p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
 }

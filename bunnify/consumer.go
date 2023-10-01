@@ -1,7 +1,6 @@
 package bunnify
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -163,12 +162,12 @@ func (c Consumer) Consume() error {
 
 			uevt := unmarshalEvent{DeliveryInfo: deliveryInfo}
 			if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
-				fmt.Println(err)
 				_ = delivery.Nack(false, false)
 				continue
 			}
 
-			if err := handler(context.TODO(), uevt); err != nil {
+			tracingCtx := extractToContext(delivery.Headers)
+			if err := handler(tracingCtx, uevt); err != nil {
 				notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, err)
 				_ = delivery.Nack(false, false)
 				continue
