@@ -47,7 +47,7 @@ You can find all the working examples under the `tests` folder.
 
 ### Consumer
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/consumer_publish_test.go#L38-L59
+https://github.com/pmorelli92/bunnify/blob/f356a80625d9dcdaec12d05953447ebcc24a1b13/tests/consumer_publish_test.go#L38-L61
 
 ### Dead letter consumer
 
