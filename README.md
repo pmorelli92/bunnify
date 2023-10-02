@@ -51,20 +51,38 @@ https://github.com/pmorelli92/bunnify/blob/f356a80625d9dcdaec12d05953447ebcc24a1
 
 ### Dead letter consumer
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/dead_letter_receives_event_test.go#L46-L66
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/dead_letter_receives_event_test.go#L34-L67
+
+### Using a default handler
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_test.go#L133-L170
 
 ### Publisher
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/tests/consumer_publish_test.go#L61-L71
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_test.go#L64-L78
+
+### Enable prometheus metrics
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_metrics_test.go#L30-L34
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_metrics_test.go#L70-L76
+
+### Enable tracing
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L18-L20
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L49-L58
+
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L33-L37
 
 ## Configuration
 
 Both the connection and consumer structs can be configured with the typical functional options. You can find the options below:
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/connection.go#L15-L37
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/bunnify/connection.go#L15-L37
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/consumer.go#L24-L71
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/bunnify/consumerOption.go#L18-L65
 
 When publishing an event, you can override the event or the correlation ID if you need. This is also achievable with options:
 
-https://github.com/pmorelli92/bunnify/blob/aa8f63943345a8e3d092e98b9cd69cf73e7a0ec9/bunnify/publishableEvent.go#L22-L36
+https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/bunnify/publishableEvent.go#L22-L36
