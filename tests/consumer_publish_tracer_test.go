@@ -25,7 +25,9 @@ func TestConsumerPublisherTracing(t *testing.T) {
 	routingKey := uuid.NewString()
 
 	connection := bunnify.NewConnection()
-	connection.Start()
+	if err := connection.Start(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Exercise consuming
 	var actualTraceID trace.TraceID

@@ -40,7 +40,9 @@ func TestConsumerPublisher(t *testing.T) {
 		bunnify.WithReconnectInterval(1*time.Second),
 		bunnify.WithNotificationChannel(notificationChannel))
 
-	connection.Start()
+	if err := connection.Start(); err != nil {
+		t.Fatal(err)
+	}
 
 	var consumedEvent bunnify.ConsumableEvent[orderCreated]
 	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {

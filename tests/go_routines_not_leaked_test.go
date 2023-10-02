@@ -15,7 +15,9 @@ func TestGoRoutinesAreNotLeaked(t *testing.T) {
 	// Setup
 	ticker := time.NewTicker(2 * time.Second)
 	connection := bunnify.NewConnection()
-	connection.Start()
+	if err := connection.Start(); err != nil {
+		t.Fatal(err)
+	}
 
 	// Exercise
 	for i := 0; i < 100; i++ {
