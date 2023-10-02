@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -106,6 +107,102 @@ func TestConsumerPublisher(t *testing.T) {
 	}
 	if routingKey != consumedEvent.DeliveryInfo.RoutingKey {
 		t.Fatalf("expected routing key %s, got %s", routingKey, consumedEvent.DeliveryInfo.RoutingKey)
+	}
+
+	goleak.VerifyNone(t)
+}
+
+func TestConsumerDefaultHandler(t *testing.T) {
+	// Setup
+	queueName := uuid.NewString()
+
+	type orderCreated struct {
+		ID string `json:"id"`
+	}
+
+	type orderUpdated struct {
+		ID        string    `json:"id"`
+		UpdatedAt time.Time `json:"updatedAt"`
+	}
+
+	connection := bunnify.NewConnection()
+	if err := connection.Start(); err != nil {
+		t.Fatal(err)
+	}
+
+	var consumedEvents []bunnify.ConsumableEvent[json.RawMessage]
+	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
+		consumedEvents = append(consumedEvents, event)
+		return nil
+	}
+
+	// Bind only to queue received messages
+	consumer := connection.NewConsumer(
+		queueName,
+		bunnify.WithDefaultHandler(eventHandler))
+
+	if err := consumer.Consume(); err != nil {
+		t.Fatal(err)
+	}
+
+	orderCreatedEvent := orderCreated{ID: uuid.NewString()}
+	orderUpdatedEvent := orderUpdated{ID: uuid.NewString(), UpdatedAt: time.Now()}
+	publisher := connection.NewPublisher()
+
+	// Publish directly to the queue, without routing key
+	err := publisher.Publish(
+		context.TODO(),
+		"",
+		queueName,
+		bunnify.NewPublishableEvent(orderCreatedEvent))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Publish directly to the queue, without routing key
+	err = publisher.Publish(
+		context.TODO(),
+		"",
+		queueName,
+		bunnify.NewPublishableEvent(orderUpdatedEvent))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(50 * time.Millisecond)
+
+	if err := connection.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Assert
+	if len(consumedEvents) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(consumedEvents))
+	}
+
+	// First event should be orderCreated
+	var receivedOrderCreated orderCreated
+	err = json.Unmarshal(consumedEvents[0].Payload, &receivedOrderCreated)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if orderCreatedEvent.ID != receivedOrderCreated.ID {
+		t.Fatalf("expected created order ID to be %s got %s", orderCreatedEvent.ID, receivedOrderCreated.ID)
+	}
+
+	var receivedOrderUpdated orderUpdated
+	err = json.Unmarshal(consumedEvents[1].Payload, &receivedOrderUpdated)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if orderUpdatedEvent.ID != receivedOrderUpdated.ID {
+		t.Fatalf("expected updated order ID to be %s got %s", orderUpdatedEvent.ID, receivedOrderUpdated.ID)
+	}
+
+	if !orderUpdatedEvent.UpdatedAt.Equal(receivedOrderUpdated.UpdatedAt) {
+		t.Fatalf("expected updated order time to be %s got %s", orderUpdatedEvent.UpdatedAt, receivedOrderUpdated.UpdatedAt)
 	}
 
 	goleak.VerifyNone(t)

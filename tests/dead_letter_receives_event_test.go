@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -36,9 +35,9 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 		return fmt.Errorf("error, this event will go to dead-letter")
 	}
 
-	var eventFromDeadLetter bunnify.ConsumableEvent[json.RawMessage]
-	defaultHandler := func(ctx context.Context, event bunnify.ConsumableEvent[json.RawMessage]) error {
-		eventFromDeadLetter = event
+	var deadEvent bunnify.ConsumableEvent[orderCreated]
+	deadEventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
+		deadEvent = event
 		return nil
 	}
 
@@ -61,7 +60,7 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 
 	deadLetterConsumer := connection.NewConsumer(
 		deadLetterQueueName,
-		bunnify.WithDefaultHandler(defaultHandler))
+		bunnify.WithHandler(routingKey, deadEventHandler))
 
 	if err := deadLetterConsumer.Consume(); err != nil {
 		t.Fatal(err)
@@ -81,32 +80,27 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 	}
 
 	// Assert
-	if publishedEvent.ID != eventFromDeadLetter.ID {
-		t.Fatalf("expected event ID %s, got %s", publishedEvent.ID, eventFromDeadLetter.ID)
+	if publishedEvent.ID != deadEvent.ID {
+		t.Fatalf("expected event ID %s, got %s", publishedEvent.ID, deadEvent.ID)
 	}
-	if publishedEvent.CorrelationID != eventFromDeadLetter.CorrelationID {
-		t.Fatalf("expected correlation ID %s, got %s", publishedEvent.CorrelationID, eventFromDeadLetter.CorrelationID)
+	if publishedEvent.CorrelationID != deadEvent.CorrelationID {
+		t.Fatalf("expected correlation ID %s, got %s", publishedEvent.CorrelationID, deadEvent.CorrelationID)
 	}
-	if !publishedEvent.Timestamp.Equal(eventFromDeadLetter.Timestamp) {
-		t.Fatalf("expected timestamp %s, got %s", publishedEvent.Timestamp, eventFromDeadLetter.Timestamp)
-	}
-
-	var jsonData map[string]interface{}
-	if err = json.Unmarshal(eventFromDeadLetter.Payload, &jsonData); err != nil {
-		t.Fatal(err)
+	if !publishedEvent.Timestamp.Equal(deadEvent.Timestamp) {
+		t.Fatalf("expected timestamp %s, got %s", publishedEvent.Timestamp, deadEvent.Timestamp)
 	}
 
-	if publishedOrderCreated.ID != jsonData["id"].(string) {
-		t.Fatalf("expected order created ID %s, got %s", publishedOrderCreated.ID, jsonData["id"].(string))
+	if publishedOrderCreated.ID != deadEvent.Payload.ID {
+		t.Fatalf("expected order created ID %s, got %s", publishedOrderCreated.ID, deadEvent.Payload.ID)
 	}
-	if exchangeName != eventFromDeadLetter.DeliveryInfo.Exchange {
-		t.Fatalf("expected exchange %s, got %s", exchangeName, eventFromDeadLetter.DeliveryInfo.Exchange)
+	if exchangeName != deadEvent.DeliveryInfo.Exchange {
+		t.Fatalf("expected exchange %s, got %s", exchangeName, deadEvent.DeliveryInfo.Exchange)
 	}
-	if queueName != eventFromDeadLetter.DeliveryInfo.Queue {
-		t.Fatalf("expected queue %s, got %s", queueName, eventFromDeadLetter.DeliveryInfo.Queue)
+	if queueName != deadEvent.DeliveryInfo.Queue {
+		t.Fatalf("expected queue %s, got %s", queueName, deadEvent.DeliveryInfo.Queue)
 	}
-	if routingKey != eventFromDeadLetter.DeliveryInfo.RoutingKey {
-		t.Fatalf("expected routing key %s, got %s", routingKey, eventFromDeadLetter.DeliveryInfo.RoutingKey)
+	if routingKey != deadEvent.DeliveryInfo.RoutingKey {
+		t.Fatalf("expected routing key %s, got %s", routingKey, deadEvent.DeliveryInfo.RoutingKey)
 	}
 
 	goleak.VerifyNone(t)
