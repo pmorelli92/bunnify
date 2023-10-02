@@ -44,7 +44,9 @@ func TestDeadLetterReceivesEvent(t *testing.T) {
 
 	// Exercise
 	connection := bunnify.NewConnection()
-	connection.Start()
+	if err := connection.Start(); err != nil {
+		t.Fatal(err)
+	}
 
 	consumer := connection.NewConsumer(
 		queueName,

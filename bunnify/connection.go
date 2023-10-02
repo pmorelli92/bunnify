@@ -62,13 +62,19 @@ func NewConnection(opts ...func(*connectionOption)) *Connection {
 }
 
 // Start establishes the connection towards the AMQP server.
-func (c *Connection) Start() {
+// Only returns errors when the uri is not valid (retry won't do a thing)
+func (c *Connection) Start() error {
 	var err error
 	var conn *amqp.Connection
 	ticker := time.NewTicker(c.options.reconnectInterval)
 
+	uri, err := amqp.ParseURI(c.options.uri)
+	if err != nil {
+		return err
+	}
+
 	for {
-		conn, err = amqp.Dial(c.options.uri)
+		conn, err = amqp.Dial(uri.String())
 		if err == nil {
 			break
 		}
@@ -84,9 +90,11 @@ func (c *Connection) Start() {
 		<-conn.NotifyClose(make(chan *amqp.Error))
 		if !c.connectionClosedBySystem {
 			notifyConnectionLost(c.options.notificationChannel)
-			c.Start()
+			_ = c.Start()
 		}
 	}()
+
+	return nil
 }
 
 // Closes connection with towards the AMQP server

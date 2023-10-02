@@ -17,7 +17,10 @@ import (
 func TestConsumerPublisherMetrics(t *testing.T) {
 	t.Run("ACK event", func(t *testing.T) {
 		connection := bunnify.NewConnection()
-		connection.Start()
+		if err := connection.Start(); err != nil {
+			t.Fatal(err)
+		}
+
 		publisher := connection.NewPublisher()
 
 		queueName := uuid.NewString()
@@ -75,7 +78,10 @@ func TestConsumerPublisherMetrics(t *testing.T) {
 
 	t.Run("NACK event", func(t *testing.T) {
 		connection := bunnify.NewConnection()
-		connection.Start()
+		if err := connection.Start(); err != nil {
+			t.Fatal(err)
+		}
+
 		publisher := connection.NewPublisher()
 
 		queueName := uuid.NewString()
@@ -133,7 +139,9 @@ func TestConsumerPublisherMetrics(t *testing.T) {
 		}
 
 		connection := bunnify.NewConnection()
-		connection.Start()
+		if err := connection.Start(); err != nil {
+			t.Fatal(err)
+		}
 
 		queueName := uuid.NewString()
 		exchangeName := uuid.NewString()
@@ -157,7 +165,9 @@ func TestConsumerPublisherMetrics(t *testing.T) {
 		}
 
 		connection = bunnify.NewConnection()
-		connection.Start()
+		if err := connection.Start(); err != nil {
+			t.Fatal(err)
+		}
 
 		// Register again but with other routing key
 		// The existing binding on the AMQP instance still exists
