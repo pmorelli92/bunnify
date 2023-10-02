@@ -117,11 +117,11 @@ func notifyEventHandlerSucceed(ch chan<- Notification, routingKey string, took i
 	}
 }
 
-func notifyEventHandlerFailed(ch chan<- Notification, routingKey string, err error) {
+func notifyEventHandlerFailed(ch chan<- Notification, routingKey string, took int64, err error) {
 	if ch != nil {
 		ch <- Notification{
 			Type:    NotificationTypeError,
-			Message: fmt.Sprintf("event handler for %s failed, error: %s", routingKey, err),
+			Message: fmt.Sprintf("event handler for %s failed, took %d milliseconds, error: %s", routingKey, took, err),
 			Source:  NotificationSourceConsumer,
 		}
 	}

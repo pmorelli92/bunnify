@@ -19,7 +19,7 @@ func TestNotifications(t *testing.T) {
 	notifyChannelLost(ch, NotificationSourceConnection)
 	notifyChannelFailed(ch, NotificationSourceConnection, fmt.Errorf("error"))
 	notifyEventHandlerSucceed(ch, "routing", 10)
-	notifyEventHandlerFailed(ch, "routing", fmt.Errorf("error"))
+	notifyEventHandlerFailed(ch, "routing", 20, fmt.Errorf("error"))
 
 	// Assert
 	if (<-ch).Type != NotificationTypeInfo {
