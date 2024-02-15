@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pmorelli92/bunnify/bunnify"
+	"github.com/pmorelli92/bunnify"
 	"go.uber.org/goleak"
 )
 
