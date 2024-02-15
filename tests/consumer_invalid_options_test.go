@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/pmorelli92/bunnify/bunnify"
+	"github.com/pmorelli92/bunnify"
 	"go.uber.org/goleak"
 )
 
