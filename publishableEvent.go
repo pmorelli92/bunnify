@@ -17,6 +17,7 @@ type PublishableEvent struct {
 type eventOptions struct {
 	eventID       string
 	correlationID string
+	requeue       bool
 }
 
 // WithEventID specifies the eventID to be published
@@ -24,6 +25,13 @@ type eventOptions struct {
 func WithEventID(eventID string) func(*eventOptions) {
 	return func(opt *eventOptions) {
 		opt.eventID = eventID
+	}
+}
+
+// WithRequeue specifies the requeue to be published
+func WithRequeue() func(*eventOptions) {
+	return func(opt *eventOptions) {
+		opt.requeue = true
 	}
 }
 
@@ -54,6 +62,7 @@ func NewPublishableEvent(payload any, opts ...func(*eventOptions)) PublishableEv
 		Metadata: Metadata{
 			ID:            evtOpts.eventID,
 			CorrelationID: evtOpts.correlationID,
+			Requeue:       evtOpts.requeue,
 			Timestamp:     time.Now(),
 		},
 		Payload: payload,
