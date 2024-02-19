@@ -72,10 +72,6 @@ func (c Consumer) shouldRetry(headers amqp.Table) bool {
 		return true
 	}
 
-	r, ok := retries.(int64)
-	if !ok {
-		return false
-	}
-
+	r, _ := retries.(int64)
 	return c.options.retries > int(r)
 }
