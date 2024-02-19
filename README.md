@@ -77,6 +77,12 @@ https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e3
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L33-L37
 
+## Retries
+
+https://github.com/pmorelli92/bunnify/blob/53c83127f94da86377ae38630e010b9693f376ef/tests/consumer_retries_test.go#L66-L87
+
+https://github.com/pmorelli92/bunnify/blob/53c83127f94da86377ae38630e010b9693f376ef/tests/consumer_retries_test.go#L66-L87
+
 ## Configuration
 
 Both the connection and consumer structs can be configured with the typical functional options. You can find the options below:
