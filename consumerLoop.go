@@ -62,7 +62,7 @@ func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 }
 
 func (c Consumer) shouldRetry(headers amqp.Table) bool {
-	if !(c.options.retries > 0) {
+	if c.options.retries <= 0 {
 		return false
 	}
 
