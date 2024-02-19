@@ -37,7 +37,8 @@ func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 		if err := handler(tracingCtx, uevt); err != nil {
 			elapsed := time.Since(startTime).Milliseconds()
 			notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
-			_ = delivery.Nack(false, uevt.Requeue)
+			requeue := c.options.quorumQueue && c.options.retries != 0
+			_ = delivery.Nack(false, requeue)
 			EventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
 			continue
 		}

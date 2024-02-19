@@ -13,6 +13,7 @@ type consumerOption struct {
 	prefetchSize    int
 	quorumQueue     bool
 	notificationCh  chan<- Notification
+	retries         int
 }
 
 // WithBindingToExchange specifies the exchange on which the queue
@@ -36,6 +37,13 @@ func WithQoS(prefetchCount, prefetchSize int) func(*consumerOption) {
 func WithQuorumQueue() func(*consumerOption) {
 	return func(opt *consumerOption) {
 		opt.quorumQueue = true
+	}
+}
+
+// WithRetries specifies the retries count
+func WithRetries(retries int) func(*consumerOption) {
+	return func(opt *consumerOption) {
+		opt.retries = retries
 	}
 }
 

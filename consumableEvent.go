@@ -10,7 +10,6 @@ type Metadata struct {
 	ID            string    `json:"id"`
 	CorrelationID string    `json:"correlationId"`
 	Timestamp     time.Time `json:"timestamp"`
-	Requeue       bool      `json:"requeue"`
 }
 
 // DeliveryInfo holds information of original queue, exchange and routing keys.
