@@ -126,7 +126,7 @@ func (c Consumer) createQueues(channel *amqp.Channel) error {
 		amqpTable["x-queue-type"] = "quorum"
 	}
 
-	if c.options.retries != 0 {
+	if c.options.retries > 0 {
 		if !c.options.quorumQueue {
 			return fmt.Errorf("to enable retries, you need to use quorum queues.")
 		}
