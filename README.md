@@ -23,7 +23,7 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 **Built-in event metadata handling:** The library automatically handles event metadata, including correlation IDs and other important details.
 
-**Retries and dead letter:** You can configure how many times an event can be retried and to send the event to a dead letter queue when the processing fails.
+**Retries and dead lettering:** You can configure how many times an event can be retried and to send the event to a dead letter queue when the processing fails.
 
 **Tracing out of the box**: Automatically injects and extracts traces when publishing and consuming. Minimal setup is required and shown on the tracer test.
 
