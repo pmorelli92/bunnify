@@ -126,6 +126,10 @@ func (c Consumer) createQueues(channel *amqp.Channel) error {
 		amqpTable["x-queue-type"] = "quorum"
 	}
 
+	if c.options.quorumQueue && c.options.retries != 0 {
+		amqpTable["x-delivery-count"] = c.options.retries
+	}
+
 	if c.options.deadLetterQueue != "" {
 		amqpTable = amqp.Table{
 			"x-dead-letter-exchange":    fmt.Sprintf("%s-exchange", c.options.deadLetterQueue),
