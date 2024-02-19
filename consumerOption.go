@@ -40,7 +40,10 @@ func WithQuorumQueue() func(*consumerOption) {
 	}
 }
 
-// WithRetries specifies the retries count
+// WithRetries specifies the retries count before the event is discarded or sent to dead letter.
+// Quorum queues are required to use this feature.
+// The event will be processed at max as retries + 1.
+// If specified amount is 3, the event can be processed up to 4 times.
 func WithRetries(retries int) func(*consumerOption) {
 	return func(opt *consumerOption) {
 		opt.retries = retries
