@@ -37,7 +37,7 @@ func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 		if err := handler(tracingCtx, uevt); err != nil {
 			elapsed := time.Since(startTime).Milliseconds()
 			notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
-			_ = delivery.Nack(false, false)
+			_ = delivery.Nack(false, c.shouldRetry(delivery.Headers))
 			EventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
 			continue
 		}
@@ -59,4 +59,19 @@ func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 	if err := c.Consume(); err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
+}
+
+func (c Consumer) shouldRetry(headers amqp.Table) bool {
+	if c.options.retries <= 0 {
+		return false
+	}
+
+	// before the first retry, the delivery count is not present (so 0)
+	retries, ok := headers["x-delivery-count"]
+	if !ok {
+		return true
+	}
+
+	r, _ := retries.(int64)
+	return c.options.retries > int(r)
 }

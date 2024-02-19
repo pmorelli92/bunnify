@@ -126,11 +126,15 @@ func (c Consumer) createQueues(channel *amqp.Channel) error {
 		amqpTable["x-queue-type"] = "quorum"
 	}
 
-	if c.options.deadLetterQueue != "" {
-		amqpTable = amqp.Table{
-			"x-dead-letter-exchange":    fmt.Sprintf("%s-exchange", c.options.deadLetterQueue),
-			"x-dead-letter-routing-key": "",
+	if c.options.retries > 0 {
+		if !c.options.quorumQueue {
+			return fmt.Errorf("to enable retries, you need to use quorum queues.")
 		}
+	}
+
+	if c.options.deadLetterQueue != "" {
+		amqpTable["x-dead-letter-exchange"] = fmt.Sprintf("%s-exchange", c.options.deadLetterQueue)
+		amqpTable["x-dead-letter-routing-key"] = ""
 
 		_, err := channel.QueueDeclare(
 			c.options.deadLetterQueue,
