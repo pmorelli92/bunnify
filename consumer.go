@@ -42,6 +42,12 @@ func (c *Connection) NewConsumer(
 	}
 }
 
+// AddHandlerToConsumer adds a handler for the given routing key.
+// It is another way to add handlers when the consumer is already created and cannot use the options.
+func AddHandlerToConsumer[T any](consumer *Consumer, routingKey string, handler EventHandler[T]) {
+	consumer.options.handlers[routingKey] = newWrappedHandler(handler)
+}
+
 // Consume will start consuming events for the indicated queue.
 // The first time this function is called it will return error if
 // handlers or default handler are not specified and also if queues, exchanges,
