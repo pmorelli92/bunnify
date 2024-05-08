@@ -33,7 +33,7 @@ jobs:
       run: cd outbox && go test -coverprofile=../profile.outbox.cov -coverpkg=./... ./...
 
     - name: Merge coverage
-      run: cat profile.outbox.cov | grep -v 'mode: set' >> profile.bunnify.cov
+      run: 'cat profile.outbox.cov | grep -v "mode: set" >> profile.bunnify.cov'
 
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1
