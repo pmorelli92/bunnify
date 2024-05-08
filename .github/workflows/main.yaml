@@ -1,4 +1,4 @@
-name: Tests
+name: CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
     - main
 
 jobs:
-  docker:
+  tests:
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
@@ -26,11 +26,17 @@ jobs:
     - name: Get cover tooling (2/2)
       run: go get github.com/mattn/goveralls
 
-    - name: Test
-      run: go test -coverprofile=profile.cov -coverpkg=$(go list ./... | paste -sd ',' -) ./...
+    - name: Test Bunnify
+      run: go test -coverprofile=profile.bunnify.cov -coverpkg=./... ./...
+
+    - name: Test Outbox
+      run: cd outbox && go test -coverprofile=../profile.outbox.cov -coverpkg=./... ./...
+
+    - name: Merge coverage
+      run: cat profile.outbox.cov | grep -v 'mode: set' >> profile.bunnify.cov
 
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1
       with:
-        path-to-profile: profile.cov
+        path-to-profile: profile.bunnify.cov
         github-token: ${{ secrets.GITHUB_TOKEN }}
