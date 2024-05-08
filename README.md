@@ -13,6 +13,9 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 </div>
 
+> [!IMPORTANT]
+> While from my perspective the library is working just fine, I am still changing things here and there. Even tough the library is tagged as semver, I will start respecting it after the `v1.0.0`, and I won't guarantee backwards compatibility before that.
+
 ## Features
 
 **Easy setup:** Bunnify is designed to be easy to set up and use. Simply reference the library and start publishing and consuming events.
@@ -25,7 +28,17 @@ Bunnify is a library for publishing and consuming events for AMQP.
 
 **Retries and dead lettering:** You can configure how many times an event can be retried and to send the event to a dead letter queue when the processing fails.
 
-**Tracing out of the box**: Automatically injects and extracts traces when publishing and consuming. Minimal setup is required and shown on the tracer test.
+**Tracing out of the box**: Automatically injects and extracts traces when publishing and consuming. Minimal setup required is shown on the tracer test.
+
+**Prometheus metrics**: Prometheus gatherer will collect automatically the following metrics:
+
+- `amqp_events_received`
+- `amqp_events_without_handler`
+- `amqp_events_not_parsable`
+- `amqp_events_nack`
+- `amqp_events_processed_duration`
+- `amqp_events_publish_succeed`
+- `amqp_events_publish_failed`
 
 **Only dependencies needed:** The intention of the library is to avoid having lots of unneeded dependencies. I will always try to triple check the dependencies and use the least quantity of libraries to achieve the functionality required.
 
@@ -35,41 +48,49 @@ Bunnify is a library for publishing and consuming events for AMQP.
 - `go.opentelemetry.io/otel`: Handles the injection and extraction of the traces on the events.
 - `github.com/prometheus/client_golang`: Used in order to export metrics to Prometheus.
 
+**Outbox publisher:** There is a submodule that you can refer with `go get github.com/pmorelli92/bunnify/outbox`. This publisher is wrapping the default bunnify publisher and stores all events in a database table which will be looped in an async way to be published to AMQP. You can read more [here].(./outbox/README.md)
+
 ## Motivation
 
 Every workplace I have been had their own AMQP library. Most of the time the problems that they try to solve are reconnection, logging, correlation, handling the correct body type for events and dead letter. Most of this libraries are good but also built upon some other internal libraries and with some company's specifics that makes them impossible to open source.
 
-Some developers are often spoiled with these as they provide a good dev experience and that is great; but you cannot use it in side projects, or if you start your own company.
+Some developers are often spoiled with these as they provide a good dev experience and that is great; but if you cannot use it in side projects or if you start your own company, what is the point?
 
 Bunnify aims to provide a flexible and adaptable solution that can be used in a variety of environments and scenarios. By abstracting away many of the technical details of AMQP publishing and consumption, Bunnify makes it easy to get started with event-driven architecture without needing to be an AMQP expert.
+
+## Installation
+
+```
+go get github.com/pmorelli92/bunnify
+```
 
 ## Examples
 
 You can find all the working examples under the `tests` folder.
 
-### Consumer
+**Consumer**
 
 https://github.com/pmorelli92/bunnify/blob/f356a80625d9dcdaec12d05953447ebcc24a1b13/tests/consumer_publish_test.go#L38-L61
 
-### Dead letter consumer
+**Dead letter consumer**
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/dead_letter_receives_event_test.go#L34-L67
 
-### Using a default handler
+**Using a default handler**
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_test.go#L133-L170
 
-### Publisher
+**Publisher**
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_test.go#L64-L78
 
-### Enable prometheus metrics
+**Enable Prometheus metrics**
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_metrics_test.go#L30-L34
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_metrics_test.go#L70-L76
 
-### Enable tracing
+**Enable tracing**
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L18-L20
 
@@ -77,13 +98,13 @@ https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e3
 
 https://github.com/pmorelli92/bunnify/blob/76f7495ef660fd4c802af8e610ffbc9cca0e39ba/tests/consumer_publish_tracer_test.go#L33-L37
 
-## Retries
+**Retries**
 
 https://github.com/pmorelli92/bunnify/blob/53c83127f94da86377ae38630e010b9693f376ef/tests/consumer_retries_test.go#L66-L87
 
 https://github.com/pmorelli92/bunnify/blob/53c83127f94da86377ae38630e010b9693f376ef/tests/consumer_retries_test.go#L66-L87
 
-## Configuration
+**Configuration**
 
 Both the connection and consumer structs can be configured with the typical functional options. You can find the options below:
 

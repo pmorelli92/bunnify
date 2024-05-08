@@ -54,10 +54,10 @@ func (p *Publisher) Publish(
 
 	err = p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
 	if err != nil {
-		EventPublishFailed(exchange, routingKey)
+		eventPublishFailed(exchange, routingKey)
 		return err
 	}
 
-	EventPublishSucceed(exchange, routingKey)
+	eventPublishSucceed(exchange, routingKey)
 	return nil
 }
