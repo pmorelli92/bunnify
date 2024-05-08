@@ -9,7 +9,7 @@
 [![Tests](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml/badge.svg?branch=main)](https://github.com/pmorelli92/bunnify/actions/workflows/main.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/pmorelli92/bunnify/badge.svg?branch=main&kill_cache=1)](https://coveralls.io/github/pmorelli92/bunnify?branch=main)
 
-Bunnify is a library for publishing and consuming events for AMQP.
+Bunnify is a library to publish and consume events for AMQP.
 
 </div>
 
@@ -48,7 +48,7 @@ Bunnify is a library for publishing and consuming events for AMQP.
 - `go.opentelemetry.io/otel`: Handles the injection and extraction of the traces on the events.
 - `github.com/prometheus/client_golang`: Used in order to export metrics to Prometheus.
 
-**Outbox publisher:** There is a submodule that you can refer with `go get github.com/pmorelli92/bunnify/outbox`. This publisher is wrapping the default bunnify publisher and stores all events in a database table which will be looped in an async way to be published to AMQP. You can read more [here].(./outbox/README.md)
+**Outbox publisher:** There is a submodule that you can refer with `go get github.com/pmorelli92/bunnify/outbox`. This publisher is wrapping the default bunnify publisher and stores all events in a database table which will be looped in an async way to be published to AMQP. You can read more [here](./outbox/README.md).
 
 ## Motivation
 
