@@ -1,7 +1,7 @@
 ## Outbox
 
 > [!IMPORTANT]
-> This submodule is couple with `github.com/jackc/pgx/v5` and therefore works for Postgres databases only.
+> This submodule is couple with `github.com/jackc/pgx/v5` and therefore works for Postgres databases only. This is the reason why this is shipped in a submodule instead of being included in the base module.
 
 This submodule implements the [outbox pattern](https://microservices.io/patterns/data/transactional-outbox.html) on top of the Bunnify publisher.
 
@@ -27,4 +27,4 @@ https://github.com/pmorelli92/bunnify/blob/985913450b7b9a21219b96f23843288bef7ea
 
 **Configuration**
 
-https://github.com/pmorelli92/bunnify/blob/985913450b7b9a21219b96f23843288bef7eac74/outbox/publisherOption.go#L18-L38
+https://github.com/pmorelli92/bunnify/blob/985913450b7b9a21219b96f23843288bef7eac74/outbox/publisherOption.go#L17-L38
