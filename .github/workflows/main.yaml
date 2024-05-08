@@ -17,8 +17,8 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Start RabbitMQ
-      run: docker compose -f tests/docker-compose.yaml up -d
+    - name: Start dependencies
+      run: docker compose -f tests/docker-compose.yaml -f outbox/tests/docker-compose.yaml up -d
 
     - name: Get cover tooling (1/2)
       run: go get golang.org/x/tools/cmd/cover

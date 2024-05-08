@@ -57,14 +57,14 @@ var (
 		}, []string{queue, routingKey, result},
 	)
 
-	eventPublishSucceed = prometheus.NewCounterVec(
+	eventPublishSucceedCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "amqp_events_publish_succeed",
 			Help: "Count of AMQP events that could be published successfully",
 		}, []string{exchange, routingKey},
 	)
 
-	eventPublishFailed = prometheus.NewCounterVec(
+	eventPublishFailedCounter = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "amqp_events_publish_failed",
 			Help: "Count of AMQP events that could not be published",
@@ -72,19 +72,19 @@ var (
 	)
 )
 
-func EventReceived(queue string, routingKey string) {
+func eventReceived(queue string, routingKey string) {
 	eventReceivedCounter.WithLabelValues(queue, routingKey).Inc()
 }
 
-func EventWithoutHandler(queue string, routingKey string) {
+func eventWithoutHandler(queue string, routingKey string) {
 	eventWithoutHandlerCounter.WithLabelValues(queue, routingKey).Inc()
 }
 
-func EventNotParsable(queue string, routingKey string) {
+func eventNotParsable(queue string, routingKey string) {
 	eventNotParsableCounter.WithLabelValues(queue, routingKey).Inc()
 }
 
-func EventNack(queue string, routingKey string, milliseconds int64) {
+func eventNack(queue string, routingKey string, milliseconds int64) {
 	eventNackCounter.WithLabelValues(queue, routingKey).Inc()
 
 	eventProcessedDuration.
@@ -92,7 +92,7 @@ func EventNack(queue string, routingKey string, milliseconds int64) {
 		Observe(float64(milliseconds))
 }
 
-func EventAck(queue string, routingKey string, milliseconds int64) {
+func eventAck(queue string, routingKey string, milliseconds int64) {
 	eventAckCounter.WithLabelValues(queue, routingKey).Inc()
 
 	eventProcessedDuration.
@@ -100,12 +100,12 @@ func EventAck(queue string, routingKey string, milliseconds int64) {
 		Observe(float64(milliseconds))
 }
 
-func EventPublishSucceed(exchange string, routingKey string) {
-	eventPublishSucceed.WithLabelValues(exchange, routingKey).Inc()
+func eventPublishSucceed(exchange string, routingKey string) {
+	eventPublishSucceedCounter.WithLabelValues(exchange, routingKey).Inc()
 }
 
-func EventPublishFailed(exchange string, routingKey string) {
-	eventPublishFailed.WithLabelValues(exchange, routingKey).Inc()
+func eventPublishFailed(exchange string, routingKey string) {
+	eventPublishFailedCounter.WithLabelValues(exchange, routingKey).Inc()
 }
 
 func InitMetrics(registerer prometheus.Registerer) error {
@@ -116,8 +116,8 @@ func InitMetrics(registerer prometheus.Registerer) error {
 		eventWithoutHandlerCounter,
 		eventNotParsableCounter,
 		eventProcessedDuration,
-		eventPublishSucceed,
-		eventPublishFailed,
+		eventPublishSucceedCounter,
+		eventPublishFailedCounter,
 	}
 	for _, collector := range collectors {
 		mv, ok := collector.(metricResetter)
