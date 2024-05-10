@@ -4,6 +4,8 @@ go 1.21
 
 toolchain go1.22.2
 
+replace github.com/pmorelli92/bunnify => ../
+
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.5.5
@@ -12,7 +14,7 @@ require (
 	go.opentelemetry.io/otel v1.26.0
 	go.opentelemetry.io/otel/sdk v1.26.0
 	go.opentelemetry.io/otel/trace v1.26.0
-	go.uber.org/goleak v1.2.1
+	go.uber.org/goleak v1.3.0
 )
 
 require (
@@ -27,7 +29,7 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.53.0 // indirect
 	github.com/prometheus/procfs v0.14.0 // indirect
-	github.com/rabbitmq/amqp091-go v1.9.0 // indirect
+	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	go.opentelemetry.io/otel/metric v1.26.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
