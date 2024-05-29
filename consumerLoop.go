@@ -79,6 +79,7 @@ func (c Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 		notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
 		_ = delivery.Nack(false, c.shouldRetry(delivery.Headers))
 		eventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
+		return
 	}
 
 	elapsed := time.Since(startTime).Milliseconds()
