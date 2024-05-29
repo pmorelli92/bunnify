@@ -48,13 +48,29 @@ func AddHandlerToConsumer[T any](consumer *Consumer, routingKey string, handler 
 	consumer.options.handlers[routingKey] = newWrappedHandler(handler)
 }
 
-// Consume will start consuming events for the indicated queue.
+// Consume will start consuming events from the indicated queue.
+// The first time this function is called it will return error if
+// handlers or default handler are not specified or if queues, exchanges,
+// bindings and qos creation don't succeed. In case this function gets called
+// recursively due to channel reconnection, the errors will be pushed to
+// the notification channel (if one has been indicated in the connection).
+func (c Consumer) Consume() error {
+	return c.consume(false)
+}
+
+// ConsumeParallel will start consuming events for the indicated queue.
 // The first time this function is called it will return error if
 // handlers or default handler are not specified and also if queues, exchanges,
 // bindings or qos creation don't succeed. In case this function gets called
 // recursively due to channel reconnection, the errors will be pushed to
 // the notification channel (if one has been indicated in the connection).
-func (c Consumer) Consume() error {
+// The difference between this and the regular Consume is that this one fires
+// a go routine per each message received as opposed of sequentially.
+func (c Consumer) ConsumeParallel() error {
+	return c.consume(true)
+}
+
+func (c Consumer) consume(parallel bool) error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
 		return fmt.Errorf("connection is already closed by system")
@@ -89,7 +105,12 @@ func (c Consumer) Consume() error {
 		return fmt.Errorf("failed to establish consuming from queue: %w", err)
 	}
 
-	go c.loop(channel, deliveries)
+	if parallel {
+		go c.parallelLoop(channel, deliveries)
+	} else {
+		go c.loop(channel, deliveries)
+	}
+
 	return nil
 }
 
