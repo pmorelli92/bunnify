@@ -59,6 +59,7 @@ func (c Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 		if c.options.defaultHandler == nil {
 			_ = delivery.Nack(false, false)
 			eventWithoutHandler(c.queueName, deliveryInfo.RoutingKey)
+			return
 		}
 		handler = c.options.defaultHandler
 	}
@@ -69,6 +70,7 @@ func (c Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 	if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
 		_ = delivery.Nack(false, false)
 		eventNotParsable(c.queueName, deliveryInfo.RoutingKey)
+		return
 	}
 
 	tracingCtx := extractToContext(delivery.Headers)
