@@ -8,7 +8,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
+func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 	mutex := sync.Mutex{}
 	for delivery := range deliveries {
 		c.handle(delivery, &mutex)
@@ -27,7 +27,7 @@ func (c Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 	}
 }
 
-func (c Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
+func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 	mutex := sync.Mutex{}
 	for delivery := range deliveries {
 		go c.handle(delivery, &mutex)
@@ -41,12 +41,12 @@ func (c Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Del
 
 	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
 
-	if err := c.Consume(); err != nil {
+	if err := c.ConsumeParallel(); err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
 }
 
-func (c Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
+func (c *Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 	startTime := time.Now()
 	deliveryInfo := getDeliveryInfo(c.queueName, delivery)
 	eventReceived(c.queueName, deliveryInfo.RoutingKey)
@@ -88,7 +88,7 @@ func (c Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 	eventAck(c.queueName, deliveryInfo.RoutingKey, elapsed)
 }
 
-func (c Consumer) shouldRetry(headers amqp.Table) bool {
+func (c *Consumer) shouldRetry(headers amqp.Table) bool {
 	if c.options.retries <= 0 {
 		return false
 	}

@@ -54,7 +54,7 @@ func AddHandlerToConsumer[T any](consumer *Consumer, routingKey string, handler 
 // bindings and qos creation don't succeed. In case this function gets called
 // recursively due to channel reconnection, the errors will be pushed to
 // the notification channel (if one has been indicated in the connection).
-func (c Consumer) Consume() error {
+func (c *Consumer) Consume() error {
 	return c.consume(false)
 }
 
@@ -66,14 +66,19 @@ func (c Consumer) Consume() error {
 // the notification channel (if one has been indicated in the connection).
 // The difference between this and the regular Consume is that this one fires
 // a go routine per each message received as opposed of sequentially.
-func (c Consumer) ConsumeParallel() error {
+func (c *Consumer) ConsumeParallel() error {
 	return c.consume(true)
 }
 
-func (c Consumer) consume(parallel bool) error {
+func (c *Consumer) consume(parallel bool) error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
 		return fmt.Errorf("connection is already closed by system")
+	}
+
+	// If obtained channel is closed, try again
+	if channel.IsClosed() {
+		return c.consume(parallel)
 	}
 
 	if !c.initialized {
@@ -114,7 +119,7 @@ func (c Consumer) consume(parallel bool) error {
 	return nil
 }
 
-func (c Consumer) createExchanges(channel *amqp.Channel) error {
+func (c *Consumer) createExchanges(channel *amqp.Channel) error {
 	errs := make([]error, 0)
 
 	if c.options.exchange != "" {
@@ -144,7 +149,7 @@ func (c Consumer) createExchanges(channel *amqp.Channel) error {
 	return errors.Join(errs...)
 }
 
-func (c Consumer) createQueues(channel *amqp.Channel) error {
+func (c *Consumer) createQueues(channel *amqp.Channel) error {
 	errs := make([]error, 0)
 
 	amqpTable := amqp.Table{}
@@ -187,7 +192,7 @@ func (c Consumer) createQueues(channel *amqp.Channel) error {
 	return errors.Join(errs...)
 }
 
-func (c Consumer) queueBind(channel *amqp.Channel) error {
+func (c *Consumer) queueBind(channel *amqp.Channel) error {
 	errs := make([]error, 0)
 
 	if c.options.exchange != "" {
