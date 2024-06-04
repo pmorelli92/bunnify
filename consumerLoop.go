@@ -14,8 +14,8 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 		c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, the channel stopped. Close it,
-	// notify the error and start the consumer so it will start another loop.
+	// If the for exits, it means the channel stopped.
+	// Close it, notify the error and start the consumer so it will start another loop.
 	if !channel.IsClosed() {
 		channel.Close()
 	}
@@ -33,8 +33,8 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 		go c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, the channel stopped. Close it,
-	// notify the error and start the consumer so it will start another loop.
+	// If the for exits, it means the channel stopped.
+	// Close it, notify the error and start the consumer so it will start another loop.
 	if !channel.IsClosed() {
 		channel.Close()
 	}
@@ -58,6 +58,7 @@ func (c *Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
 	if !ok {
 		if c.options.defaultHandler == nil {
 			_ = delivery.Nack(false, false)
+			notifyEventHandlerNotFound(c.options.notificationCh, deliveryInfo.RoutingKey)
 			eventWithoutHandler(c.queueName, deliveryInfo.RoutingKey)
 			return
 		}
