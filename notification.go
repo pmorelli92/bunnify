@@ -110,7 +110,7 @@ func notifyChannelFailed(ch chan<- Notification, source NotificationSource, err 
 func notifyEventHandlerNotFound(ch chan<- Notification, routingKey string) {
 	if ch != nil {
 		ch <- Notification{
-			Type:    NotificationTypeInfo,
+			Type:    NotificationTypeError,
 			Message: fmt.Sprintf("event handler for %s was not found", routingKey),
 			Source:  NotificationSourceConsumer,
 		}
