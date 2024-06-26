@@ -4,7 +4,19 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: "indirect"
   - package-ecosystem: "gomod"
     directory: "/outbox/"
     schedule:
       interval: "weekly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
+    allow:
+      - dependency-type: "indirect"
