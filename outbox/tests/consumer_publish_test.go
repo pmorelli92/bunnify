@@ -97,7 +97,7 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 	// Setup outbox publisher
 	outboxPublisher, err := outbox.NewPublisher(
 		dbCtx, db, *publisher,
-		outbox.WithLoopingInterval(1*time.Second),
+		outbox.WithLoopingInterval(500*time.Millisecond),
 		outbox.WithNoficationChannel(notificationChannel))
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 	}
 
 	// Wait for the outbox loop to execute
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	// Assert tracing data
 	expectedSpanID := trace.SpanFromContext(publisherCtx).SpanContext().SpanID()
@@ -175,13 +175,15 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 
 	// Dispose outbox
 	outboxPublisher.Close()
-	time.Sleep(1500 * time.Millisecond) // Wait for the outbox loop to exit
 	db.Close()
 
 	// Dispose amqp connection
 	if err := connection.Close(); err != nil {
 		t.Fatal(err)
 	}
+
+	// Wait for the consumer and outbox loop
+	time.Sleep(1000 * time.Millisecond)
 
 	// Stop the notification go routine so goleak does not fail
 	exitCh <- true
