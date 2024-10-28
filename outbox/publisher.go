@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pmorelli92/bunnify"
-	gen_sql "github.com/pmorelli92/bunnify/outbox/generated"
+	gen_sql "github.com/pmorelli92/bunnify/outbox/internal/generated"
 	"go.opentelemetry.io/otel/trace"
 )
 
