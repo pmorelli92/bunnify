@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pmorelli92/bunnify"
-	gen_sql "github.com/pmorelli92/bunnify/outbox/internal/generated"
+	"github.com/pmorelli92/bunnify/outbox/internal/sqlc"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -30,7 +30,7 @@ func (p *Publisher) loop() {
 			continue
 		}
 
-		q := gen_sql.New(tx)
+		q := sqlc.New(tx)
 		evts, err := q.GetOutboxEventsForPublish(ctx)
 		if err != nil {
 			_ = tx.Rollback(ctx)

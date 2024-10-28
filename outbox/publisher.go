@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pmorelli92/bunnify"
-	gen_sql "github.com/pmorelli92/bunnify/outbox/internal/generated"
+	"github.com/pmorelli92/bunnify/outbox/internal/sqlc"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -74,7 +74,7 @@ func (p *Publisher) Publish(
 	// If telemetry is not used, this will be just default zeroes
 	spanContext := trace.SpanFromContext(ctx).SpanContext()
 
-	return gen_sql.New(tx).InsertOutboxEvents(ctx, gen_sql.InsertOutboxEventsParams{
+	return sqlc.New(tx).InsertOutboxEvents(ctx, sqlc.InsertOutboxEventsParams{
 		EventID:    event.ID,
 		Exchange:   exchange,
 		RoutingKey: routingKey,
