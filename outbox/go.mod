@@ -9,7 +9,7 @@ replace github.com/pmorelli92/bunnify => ../
 require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.1
-	github.com/pmorelli92/bunnify v0.0.6
+	github.com/pmorelli92/bunnify v0.0.7
 	github.com/prometheus/client_golang v1.20.5
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/sdk v1.31.0
