@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -66,10 +67,16 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 	var actualSpanID trace.SpanID
 	var actualTraceID trace.TraceID
 	var consumedEvent bunnify.ConsumableEvent[orderCreated]
+
+	// Signal when event was consumed
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
 	eventHandler := func(ctx context.Context, event bunnify.ConsumableEvent[orderCreated]) error {
 		consumedEvent = event
 		actualSpanID = trace.SpanFromContext(ctx).SpanContext().SpanID()
 		actualTraceID = trace.SpanFromContext(ctx).SpanContext().TraceID()
+		wg.Done()
 		return nil
 	}
 
@@ -126,8 +133,8 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Wait for the outbox loop to execute
-	time.Sleep(1000 * time.Millisecond)
+	// Wait for event to be consumed
+	wg.Wait()
 
 	// Assert tracing data
 	expectedSpanID := trace.SpanFromContext(publisherCtx).SpanContext().SpanID()
