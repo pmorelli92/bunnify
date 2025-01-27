@@ -171,11 +171,11 @@ func TestConsumerPublisherMetrics(t *testing.T) {
 
 		// Register again but with other routing key
 		// The existing binding on the AMQP instance still exists
-		consumer = connection.NewConsumer(
+		otherConsumer := connection.NewConsumer(
 			queueName,
 			bunnify.WithBindingToExchange(exchangeName),
 			bunnify.WithHandler("not-used-key", eventHandler))
-		if err := consumer.Consume(); err != nil {
+		if err := otherConsumer.Consume(); err != nil {
 			t.Fatal(err)
 		}
 

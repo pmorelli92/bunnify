@@ -27,13 +27,16 @@ jobs:
       run: go get github.com/mattn/goveralls
 
     - name: Test Bunnify
-      run: go test -coverprofile=profile.bunnify.cov -coverpkg=./... ./...
+      run: go test -race -coverprofile=profile.bunnify.cov -coverpkg=./... ./...
 
     - name: Test Outbox
-      run: cd outbox && go test -coverprofile=../profile.outbox.cov -coverpkg=./... ./...
+      run: cd outbox && go test -race -coverprofile=../profile.outbox.cov -coverpkg=./... ./...
 
     - name: Merge coverage
-      run: 'cat profile.outbox.cov | grep -v "mode: set" >> profile.bunnify.cov'
+      run: 'cat profile.outbox.cov | grep -v "mode: atomic" >> profile.bunnify.cov'
+
+    - name: Convert to count mode
+      run: "sed -i '1s/.*/mode: count/' profile.bunnify.cov"
 
     - name: Send coverage
       uses: shogo82148/actions-goveralls@v1

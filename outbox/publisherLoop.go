@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"sync/atomic"
 	"time"
 
 	"github.com/pmorelli92/bunnify"
@@ -16,7 +17,7 @@ import (
 func (p *Publisher) loop() {
 	ticker := time.NewTicker(p.options.loopInterval)
 	for {
-		if p.closed {
+		if atomic.LoadInt32(p.closed) == 1 {
 			notifyEndingLoop(p.options.notificationChannel)
 			return
 		}

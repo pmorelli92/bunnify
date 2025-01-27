@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,7 +21,7 @@ type Publisher struct {
 	db      *pgxpool.Pool
 	inner   bunnify.Publisher
 	options publisherOption
-	closed  bool
+	closed  *int32
 }
 
 //go:embed schema/schema.sql
@@ -51,6 +52,7 @@ func NewPublisher(
 		db:      db,
 		inner:   inner,
 		options: options,
+		closed:  new(int32),
 	}
 
 	go p.loop()
@@ -86,5 +88,5 @@ func (p *Publisher) Publish(
 }
 
 func (p *Publisher) Close() {
-	p.closed = true
+	atomic.StoreInt32(p.closed, 1)
 }
