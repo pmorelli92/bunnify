@@ -17,14 +17,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
     - name: Start dependencies
       run: docker compose -f tests/docker-compose.yaml -f outbox/tests/docker-compose.yaml up -d
-
-    - name: Get cover tooling (1/2)
-      run: go get golang.org/x/tools/cmd/cover
-
-    - name: Get cover tooling (2/2)
-      run: go get github.com/mattn/goveralls
 
     - name: Test Bunnify
       run: go test -race -coverprofile=profile.bunnify.cov -coverpkg=./... ./...
