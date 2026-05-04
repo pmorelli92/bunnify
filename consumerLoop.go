@@ -94,12 +94,17 @@ func (c *Consumer) shouldRetry(headers amqp.Table) bool {
 		return false
 	}
 
-	// before the first retry, the delivery count is not present (so 0)
-	retries, ok := headers["x-delivery-count"]
+	// On RabbitMQ 4+, basic.nack with requeue increments x-acquired-count on the
+	// redelivery. On RabbitMQ 3, the equivalent counter was x-delivery-count.
+	// Before the first retry, neither header is present (so 0).
+	count, ok := headers["x-acquired-count"]
+	if !ok {
+		count, ok = headers["x-delivery-count"]
+	}
 	if !ok {
 		return true
 	}
 
-	r, _ := retries.(int64)
+	r, _ := count.(int64)
 	return c.options.retries > int(r)
 }
