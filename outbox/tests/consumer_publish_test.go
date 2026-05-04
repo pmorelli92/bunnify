@@ -103,7 +103,7 @@ func TestOutboxWithAllAddsOn(t *testing.T) {
 
 	// Setup outbox publisher
 	outboxPublisher, err := outbox.NewPublisher(
-		dbCtx, db, *publisher,
+		dbCtx, db, publisher,
 		outbox.WithLoopingInterval(500*time.Millisecond),
 		outbox.WithNoficationChannel(notificationChannel))
 	if err != nil {

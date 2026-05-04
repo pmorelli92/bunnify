@@ -19,7 +19,7 @@ import (
 // Publisher is used for publishing events.
 type Publisher struct {
 	db      *pgxpool.Pool
-	inner   bunnify.Publisher
+	inner   *bunnify.Publisher
 	options publisherOption
 	closed  *int32
 }
@@ -32,7 +32,7 @@ var outboxSchema string
 func NewPublisher(
 	ctx context.Context,
 	db *pgxpool.Pool,
-	inner bunnify.Publisher,
+	inner *bunnify.Publisher,
 	opts ...func(*publisherOption)) (*Publisher, error) {
 
 	options := publisherOption{

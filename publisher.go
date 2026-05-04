@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 // Publisher is used for publishing events.
 type Publisher struct {
+	mu            sync.Mutex
 	inUseChannel  *amqp.Channel
 	getNewChannel func() (*amqp.Channel, bool)
 }
@@ -30,14 +32,6 @@ func (p *Publisher) Publish(
 	exchange, routingKey string,
 	event PublishableEvent) error {
 
-	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
-		channel, connectionClosed := p.getNewChannel()
-		if connectionClosed {
-			return fmt.Errorf("connection closed by system, channel will not reconnect")
-		}
-		p.inUseChannel = channel
-	}
-
 	b, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("could not marshal event: %w", err)
@@ -50,6 +44,17 @@ func (p *Publisher) Publish(
 		Timestamp:       event.Timestamp,
 		Body:            b,
 		Headers:         injectToHeaders(ctx),
+	}
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
+		channel, connectionClosed := p.getNewChannel()
+		if connectionClosed {
+			return fmt.Errorf("connection closed by system, channel will not reconnect")
+		}
+		p.inUseChannel = channel
 	}
 
 	err = p.inUseChannel.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
