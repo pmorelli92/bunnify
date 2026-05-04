@@ -2,6 +2,7 @@ package bunnify
 
 import (
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -14,15 +15,20 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 		c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, it means the channel stopped.
-	// Close it, notify the error and start the consumer so it will start another loop.
+	// If the for exits, it means the channel stopped. Close it and try to
+	// reconnect — unless the user closed the connection, in which case exit
+	// cleanly without firing channel-lost / channel-failed notifications.
 	if !channel.IsClosed() {
 		channel.Close()
 	}
 
-	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	err := c.Consume()
+	if errors.Is(err, errConnectionClosedBySystem) {
+		return
+	}
 
-	if err := c.Consume(); err != nil {
+	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	if err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
 }
@@ -33,15 +39,17 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 		go c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, it means the channel stopped.
-	// Close it, notify the error and start the consumer so it will start another loop.
 	if !channel.IsClosed() {
 		channel.Close()
 	}
 
-	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	err := c.ConsumeParallel()
+	if errors.Is(err, errConnectionClosedBySystem) {
+		return
+	}
 
-	if err := c.ConsumeParallel(); err != nil {
+	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	if err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
 }

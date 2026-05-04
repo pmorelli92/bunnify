@@ -7,6 +7,12 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// errConnectionClosedBySystem is returned by Consume when the connection has
+// been closed by the user. It is used by the consumer loop to distinguish a
+// clean shutdown from a real channel failure so that no error notifications
+// are emitted during the unwind.
+var errConnectionClosedBySystem = errors.New("connection is already closed by system")
+
 // Consumer is used for consuming to events from an specified queue.
 type Consumer struct {
 	queueName     string
@@ -73,7 +79,7 @@ func (c *Consumer) ConsumeParallel() error {
 func (c *Consumer) consume(parallel bool) error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
-		return fmt.Errorf("connection is already closed by system")
+		return errConnectionClosedBySystem
 	}
 
 	// If obtained channel is closed, try again

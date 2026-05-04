@@ -108,8 +108,10 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, bool) {
+	// When the user has closed the connection, return without emitting any
+	// notification. notifyClosingConnection has already been emitted from
+	// Close() and any further notification here would race with shutdown.
 	if c.connectionClosedBySystem {
-		notifyConnectionClosedBySystem(c.options.notificationChannel)
 		return nil, true
 	}
 
