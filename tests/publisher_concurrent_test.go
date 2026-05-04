@@ -28,8 +28,7 @@ func TestPublisherConcurrentPublish(t *testing.T) {
 	}
 
 	connection := bunnify.NewConnection(
-		bunnify.WithURI("amqp://localhost:5672"),
-		bunnify.WithReconnectInterval(1*time.Second))
+		bunnify.WithReconnectInterval(1 * time.Second))
 
 	if err := connection.Start(); err != nil {
 		t.Fatal(err)
