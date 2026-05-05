@@ -15,15 +15,13 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 		c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, it means the channel stopped. Close it and try to
-	// reconnect — unless the user closed the connection, in which case exit
-	// cleanly without firing channel-lost / channel-failed notifications.
+	// If the for exits, it means the channel stopped. Close it and try to reconnect
 	if !channel.IsClosed() {
 		channel.Close()
 	}
 
 	err := c.Consume()
-	if errors.Is(err, errConnectionClosedBySystem) {
+	if errors.Is(err, errConnectionClosedByUser) {
 		return
 	}
 
@@ -44,7 +42,7 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 	}
 
 	err := c.ConsumeParallel()
-	if errors.Is(err, errConnectionClosedBySystem) {
+	if errors.Is(err, errConnectionClosedByUser) {
 		return
 	}
 

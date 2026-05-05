@@ -67,16 +67,6 @@ func notifyClosingConnection(ch chan<- Notification) {
 	}
 }
 
-func notifyConnectionClosedBySystem(ch chan<- Notification) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeInfo,
-			Message: "connection closed by system, channel will not reconnect",
-			Source:  NotificationSourceConnection,
-		}
-	}
-}
-
 func notifyChannelEstablished(ch chan<- Notification, source NotificationSource) {
 	if ch != nil {
 		ch <- Notification{

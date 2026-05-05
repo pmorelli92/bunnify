@@ -40,9 +40,9 @@ func WithNotificationChannel(notificationCh chan<- Notification) func(*connectio
 // A single connection should be enough for the entire application as the
 // consuming and publishing is handled by channels.
 type Connection struct {
-	options                  connectionOption
-	connection               *amqp.Connection
-	connectionClosedBySystem bool
+	options                connectionOption
+	connection             *amqp.Connection
+	connectionClosedByUser bool
 }
 
 // NewConnection creates a new AMQP connection using the indicated
@@ -88,7 +88,7 @@ func (c *Connection) Start() error {
 
 	go func() {
 		<-conn.NotifyClose(make(chan *amqp.Error))
-		if !c.connectionClosedBySystem {
+		if !c.connectionClosedByUser {
 			notifyConnectionLost(c.options.notificationChannel)
 			_ = c.Start()
 		}
@@ -99,7 +99,7 @@ func (c *Connection) Start() error {
 
 // Closes connection with towards the AMQP server
 func (c *Connection) Close() error {
-	c.connectionClosedBySystem = true
+	c.connectionClosedByUser = true
 	if c.connection != nil {
 		notifyClosingConnection(c.options.notificationChannel)
 		return c.connection.Close()
@@ -108,10 +108,7 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, bool) {
-	// When the user has closed the connection, return without emitting any
-	// notification. notifyClosingConnection has already been emitted from
-	// Close() and any further notification here would race with shutdown.
-	if c.connectionClosedBySystem {
+	if c.connectionClosedByUser {
 		return nil, true
 	}
 
