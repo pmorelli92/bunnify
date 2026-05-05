@@ -2,6 +2,7 @@ package bunnify
 
 import (
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -14,15 +15,18 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 		c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, it means the channel stopped.
-	// Close it, notify the error and start the consumer so it will start another loop.
+	// If the for exits, it means the channel stopped. Close it and try to reconnect
 	if !channel.IsClosed() {
 		channel.Close()
 	}
 
-	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	err := c.Consume()
+	if errors.Is(err, errConnectionClosedByUser) {
+		return
+	}
 
-	if err := c.Consume(); err != nil {
+	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	if err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
 }
@@ -33,15 +37,17 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 		go c.handle(delivery, &mutex)
 	}
 
-	// If the for exits, it means the channel stopped.
-	// Close it, notify the error and start the consumer so it will start another loop.
 	if !channel.IsClosed() {
 		channel.Close()
 	}
 
-	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	err := c.ConsumeParallel()
+	if errors.Is(err, errConnectionClosedByUser) {
+		return
+	}
 
-	if err := c.ConsumeParallel(); err != nil {
+	notifyChannelLost(c.options.notificationCh, NotificationSourceConsumer)
+	if err != nil {
 		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
 	}
 }
@@ -94,12 +100,17 @@ func (c *Consumer) shouldRetry(headers amqp.Table) bool {
 		return false
 	}
 
-	// before the first retry, the delivery count is not present (so 0)
-	retries, ok := headers["x-delivery-count"]
+	// On RabbitMQ 4+, basic.nack with requeue increments x-acquired-count on the
+	// redelivery. On RabbitMQ 3, the equivalent counter was x-delivery-count.
+	// Before the first retry, neither header is present (so 0).
+	count, ok := headers["x-acquired-count"]
+	if !ok {
+		count, ok = headers["x-delivery-count"]
+	}
 	if !ok {
 		return true
 	}
 
-	r, _ := retries.(int64)
+	r, _ := count.(int64)
 	return c.options.retries > int(r)
 }

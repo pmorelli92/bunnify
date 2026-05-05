@@ -14,7 +14,6 @@ func TestNotifications(t *testing.T) {
 	notifyConnectionLost(ch)
 	notifyConnectionFailed(ch, fmt.Errorf("error"))
 	notifyClosingConnection(ch)
-	notifyConnectionClosedBySystem(ch)
 	notifyChannelEstablished(ch, NotificationSourceConnection)
 	notifyChannelLost(ch, NotificationSourceConnection)
 	notifyChannelFailed(ch, NotificationSourceConnection, fmt.Errorf("error"))
@@ -31,9 +30,6 @@ func TestNotifications(t *testing.T) {
 	}
 	if (<-ch).Type != NotificationTypeError {
 		t.Fatal("expected notification type error")
-	}
-	if (<-ch).Type != NotificationTypeInfo {
-		t.Fatal("expected notification type info")
 	}
 	if (<-ch).Type != NotificationTypeInfo {
 		t.Fatal("expected notification type info")

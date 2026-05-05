@@ -73,7 +73,7 @@ func (c *Consumer) ConsumeParallel() error {
 func (c *Consumer) consume(parallel bool) error {
 	channel, connectionClosed := c.getNewChannel()
 	if connectionClosed {
-		return fmt.Errorf("connection is already closed by system")
+		return errConnectionClosedByUser
 	}
 
 	// If obtained channel is closed, try again
