@@ -19,6 +19,9 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 	}
 
 	err := c.Consume()
+	// c.Consume() calls c.wg.Add(1) before launching the successor goroutine,
+	// so Done() here pairs with the Add(1) that launched this goroutine.
+	defer c.wg.Done()
 	if isTerminalConnError(err) {
 		return
 	}
@@ -45,6 +48,9 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 	}
 
 	err := c.ConsumeParallel()
+	// c.ConsumeParallel() calls c.wg.Add(1) before launching the successor goroutine,
+	// so Done() here pairs with the Add(1) that launched this goroutine.
+	defer c.wg.Done()
 	if isTerminalConnError(err) {
 		return
 	}

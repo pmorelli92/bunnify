@@ -3,6 +3,7 @@ package bunnify
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -14,6 +15,7 @@ type Consumer struct {
 	initialized   bool
 	options       consumerOption
 	getNewChannel func() (*amqp.Channel, error)
+	wg            sync.WaitGroup
 }
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
@@ -119,6 +121,7 @@ func (c *Consumer) consume(parallel bool) error {
 		return fmt.Errorf("failed to establish consuming from queue: %w", err)
 	}
 
+	c.wg.Add(1)
 	if parallel {
 		go c.parallelLoop(channel, deliveries)
 	} else {
@@ -126,6 +129,14 @@ func (c *Consumer) consume(parallel bool) error {
 	}
 
 	return nil
+}
+
+// Wait blocks until all consumer goroutines (loop/parallelLoop and their
+// handler goroutines) have finished. Callers should invoke this after
+// triggering a shutdown to ensure in-flight messages are fully processed
+// before the AMQP connection is torn down.
+func (c *Consumer) Wait() {
+	c.wg.Wait()
 }
 
 func (c *Consumer) createExchanges(channel *amqp.Channel) error {
