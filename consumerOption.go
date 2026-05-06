@@ -2,9 +2,11 @@ package bunnify
 
 import (
 	"encoding/json"
+	"sync"
 )
 
 type consumerOption struct {
+	mu                  *sync.RWMutex
 	deadLetterQueue     string
 	exchange            string
 	defaultHandler      wrappedHandler

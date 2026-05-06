@@ -75,7 +75,9 @@ func (c *Consumer) handle(delivery amqp.Delivery) {
 	deliveryInfo := getDeliveryInfo(c.queueName, delivery)
 	eventReceived(c.queueName, deliveryInfo.RoutingKey)
 
+	c.options.mu.RLock()
 	handler, ok := c.options.handlers[deliveryInfo.RoutingKey]
+	c.options.mu.RUnlock()
 	if !ok {
 		if c.options.defaultHandler == nil {
 			if err := delivery.Nack(false, false); err != nil {

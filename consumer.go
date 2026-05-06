@@ -27,6 +27,7 @@ func (c *Connection) NewConsumer(
 	opts ...func(*consumerOption)) *Consumer {
 
 	options := consumerOption{
+		mu:             &sync.RWMutex{},
 		notificationCh: c.options.notificationChannel,
 		handlers:       make(map[string]wrappedHandler, 0),
 		prefetchCount:  20,
@@ -48,6 +49,8 @@ func (c *Connection) NewConsumer(
 // AddHandlerToConsumer adds a handler for the given routing key.
 // It is another way to add handlers when the consumer is already created and cannot use the options.
 func AddHandlerToConsumer[T any](consumer *Consumer, routingKey string, handler EventHandler[T]) {
+	consumer.options.mu.Lock()
+	defer consumer.options.mu.Unlock()
 	consumer.options.handlers[routingKey] = newWrappedHandler(handler)
 }
 
@@ -216,7 +219,14 @@ func (c *Consumer) queueBind(channel *amqp.Channel) error {
 	errs := make([]error, 0)
 
 	if c.options.exchange != "" {
+		c.options.mu.RLock()
+		routingKeys := make([]string, 0, len(c.options.handlers))
 		for routingKey := range c.options.handlers {
+			routingKeys = append(routingKeys, routingKey)
+		}
+		c.options.mu.RUnlock()
+
+		for _, routingKey := range routingKeys {
 			errs = append(errs, channel.QueueBind(
 				c.queueName,
 				routingKey,
