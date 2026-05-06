@@ -226,6 +226,11 @@ func (c *Connection) reconnectLoop(uri string) {
 func (c *Connection) Close() error {
 	c.closeOnce.Do(func() { close(c.done) })
 
+	// Single deadline for the entire Close() operation so the total time spent
+	// never exceeds closeTimeout regardless of how many steps are involved.
+	timer := time.NewTimer(c.options.closeTimeout)
+	defer timer.Stop()
+
 	st := c.state.Load()
 	var err error
 	if st.conn != nil {
@@ -234,9 +239,6 @@ func (c *Connection) Close() error {
 		// Run conn.Close() with a timeout to avoid blocking forever on a wedged conn.
 		done := make(chan error, 1)
 		go func() { done <- st.conn.Close() }()
-
-		timer := time.NewTimer(c.options.closeTimeout)
-		defer timer.Stop()
 
 		select {
 		case closeErr := <-done:
@@ -250,15 +252,13 @@ func (c *Connection) Close() error {
 		}
 	}
 
-	// Wait for reconnectLoop to exit, but honour the close timeout.
+	// Wait for reconnectLoop to exit, reusing the same timer so the combined
+	// conn.Close() + wg.Wait() time stays within the single closeTimeout budget.
 	waitDone := make(chan struct{})
 	go func() {
 		c.wg.Wait()
 		close(waitDone)
 	}()
-
-	timer := time.NewTimer(c.options.closeTimeout)
-	defer timer.Stop()
 
 	select {
 	case <-waitDone:
