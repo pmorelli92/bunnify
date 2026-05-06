@@ -3,16 +3,14 @@ package bunnify
 import (
 	"encoding/json"
 	"errors"
-	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
-	mutex := sync.Mutex{}
 	for delivery := range deliveries {
-		c.handle(delivery, &mutex)
+		c.handle(delivery)
 	}
 
 	// If the for exits, it means the channel stopped. Close it and try to reconnect
@@ -32,9 +30,8 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 }
 
 func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
-	mutex := sync.Mutex{}
 	for delivery := range deliveries {
-		go c.handle(delivery, &mutex)
+		go c.handle(delivery)
 	}
 
 	if !channel.IsClosed() {
@@ -52,15 +49,12 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 	}
 }
 
-func (c *Consumer) handle(delivery amqp.Delivery, mutex *sync.Mutex) {
+func (c *Consumer) handle(delivery amqp.Delivery) {
 	startTime := time.Now()
 	deliveryInfo := getDeliveryInfo(c.queueName, delivery)
 	eventReceived(c.queueName, deliveryInfo.RoutingKey)
 
-	// Establish which handler is invoked
-	mutex.Lock()
 	handler, ok := c.options.handlers[deliveryInfo.RoutingKey]
-	mutex.Unlock()
 	if !ok {
 		if c.options.defaultHandler == nil {
 			_ = delivery.Nack(false, false)

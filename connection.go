@@ -1,6 +1,8 @@
 package bunnify
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -41,8 +43,9 @@ func WithNotificationChannel(notificationCh chan<- Notification) func(*connectio
 // consuming and publishing is handled by channels.
 type Connection struct {
 	options                connectionOption
+	mu                     sync.RWMutex
 	connection             *amqp.Connection
-	connectionClosedByUser bool
+	connectionClosedByUser atomic.Bool
 }
 
 // NewConnection creates a new AMQP connection using the indicated
@@ -64,17 +67,33 @@ func NewConnection(opts ...func(*connectionOption)) *Connection {
 // Start establishes the connection towards the AMQP server.
 // Only returns errors when the uri is not valid (retry won't do a thing)
 func (c *Connection) Start() error {
-	var err error
-	var conn *amqp.Connection
-	ticker := time.NewTicker(c.options.reconnectInterval)
-
 	uri, err := amqp.ParseURI(c.options.uri)
 	if err != nil {
 		return err
 	}
 
+	if err := c.connect(uri.String()); err != nil {
+		return err
+	}
+
+	go c.reconnectLoop(uri.String())
+	return nil
+}
+
+// connect dials the broker, retrying on failure until success or until the
+// user calls Close. On success the new connection is published under the lock.
+func (c *Connection) connect(uri string) error {
+	ticker := time.NewTicker(c.options.reconnectInterval)
+	defer ticker.Stop()
+
+	var conn *amqp.Connection
+	var err error
 	for {
-		conn, err = amqp.Dial(uri.String())
+		if c.connectionClosedByUser.Load() {
+			return errConnectionClosedByUser
+		}
+
+		conn, err = amqp.Dial(uri)
 		if err == nil {
 			break
 		}
@@ -83,49 +102,79 @@ func (c *Connection) Start() error {
 		<-ticker.C
 	}
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.connectionClosedByUser.Load() {
+		return errConnectionClosedByUser
+	}
 	c.connection = conn
+
 	notifyConnectionEstablished(c.options.notificationChannel)
-
-	go func() {
-		<-conn.NotifyClose(make(chan *amqp.Error))
-		if !c.connectionClosedByUser {
-			notifyConnectionLost(c.options.notificationChannel)
-			_ = c.Start()
-		}
-	}()
-
 	return nil
+}
+
+// reconnectLoop runs in a single goroutine for the lifetime of the connection.
+// It waits for the current connection to close and, unless the user requested
+// shutdown, dials a new one in place — no recursion, no per-cycle goroutine.
+func (c *Connection) reconnectLoop(uri string) {
+	for {
+		c.mu.RLock()
+		conn := c.connection
+		c.mu.RUnlock()
+
+		<-conn.NotifyClose(make(chan *amqp.Error))
+
+		if c.connectionClosedByUser.Load() {
+			return
+		}
+
+		notifyConnectionLost(c.options.notificationChannel)
+		if err := c.connect(uri); err != nil {
+			return
+		}
+	}
 }
 
 // Closes connection with towards the AMQP server
 func (c *Connection) Close() error {
-	c.connectionClosedByUser = true
-	if c.connection != nil {
+	c.connectionClosedByUser.Store(true)
+
+	c.mu.RLock()
+	conn := c.connection
+	c.mu.RUnlock()
+
+	if conn != nil {
 		notifyClosingConnection(c.options.notificationChannel)
-		return c.connection.Close()
+		return conn.Close()
 	}
 	return nil
 }
 
 func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, bool) {
-	if c.connectionClosedByUser {
+	if c.connectionClosedByUser.Load() {
 		return nil, true
 	}
 
-	var err error
-	var ch *amqp.Channel
 	ticker := time.NewTicker(c.options.reconnectInterval)
+	defer ticker.Stop()
 
 	for {
-		ch, err = c.connection.Channel()
+		if c.connectionClosedByUser.Load() {
+			return nil, true
+		}
+
+		c.mu.RLock()
+		conn := c.connection
+		c.mu.RUnlock()
+
+		ch, err := conn.Channel()
 		if err == nil {
-			break
+			notifyChannelEstablished(c.options.notificationChannel, source)
+			return ch, false
 		}
 
 		notifyChannelFailed(c.options.notificationChannel, source, err)
 		<-ticker.C
 	}
-
-	notifyChannelEstablished(c.options.notificationChannel, source)
-	return ch, false
 }
