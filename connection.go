@@ -148,20 +148,22 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 
 		conn, err := amqp.Dial(uri)
 		if err == nil {
-			// Issue #16: notify before closing ready so observers see the notification
-			// before getNewChannel unblocks.
-			c.state.Store(&connState{conn: conn, ready: ready})
-			notifyConnectionEstablished(c.options.notificationChannel)
-			close(ready)
-
-			// If Close() fired in the window between the last done-check and here,
-			// close the just-dialled conn so it is not leaked.
+			// Fix C8: check done before storing conn and unblocking waiters.
+			// The conn is dialled but not yet visible to anyone, so closing it
+			// here races nothing and eliminates the window where waiters could
+			// grab channels from a conn we are about to tear down.
 			select {
 			case <-c.done:
 				conn.Close()
 				return ErrConnectionClosedByUser
 			default:
 			}
+
+			// Issue #16: notify before closing ready so observers see the notification
+			// before getNewChannel unblocks.
+			c.state.Store(&connState{conn: conn, ready: ready})
+			notifyConnectionEstablished(c.options.notificationChannel)
+			close(ready)
 
 			return nil
 		}
