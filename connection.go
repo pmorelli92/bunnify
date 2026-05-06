@@ -43,7 +43,7 @@ func WithCloseTimeout(d time.Duration) func(*connectionOption) {
 
 // WithMaxReconnectAttempts limits the total number of dial retries across
 // all reconnect cycles. When n > 0 and the limit is reached,
-// getNewChannel returns errMaxReconnectAttemptsReached and the loop exits.
+// getNewChannel returns ErrMaxReconnectAttemptsReached and the loop exits.
 func WithMaxReconnectAttempts(n int) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.maxReconnectAttempts = n
@@ -105,7 +105,7 @@ func (c *Connection) Start() error {
 	// Guard against calling Start() after Close().
 	select {
 	case <-c.done:
-		return errConnectionClosedByUser
+		return ErrConnectionClosedByUser
 	default:
 	}
 
@@ -142,7 +142,7 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 	for {
 		select {
 		case <-c.done:
-			return errConnectionClosedByUser
+			return ErrConnectionClosedByUser
 		default:
 		}
 
@@ -159,7 +159,7 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 			select {
 			case <-c.done:
 				conn.Close()
-				return errConnectionClosedByUser
+				return ErrConnectionClosedByUser
 			default:
 			}
 
@@ -169,7 +169,7 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 		attempts++
 		if c.options.maxReconnectAttempts > 0 && attempts >= c.options.maxReconnectAttempts {
 			notifyConnectionFailed(c.options.notificationChannel, err)
-			return errMaxReconnectAttemptsReached
+			return ErrMaxReconnectAttemptsReached
 		}
 
 		notifyConnectionFailed(c.options.notificationChannel, err)
@@ -183,7 +183,7 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 
 		select {
 		case <-c.done:
-			return errConnectionClosedByUser
+			return ErrConnectionClosedByUser
 		case <-ticker.C:
 		}
 	}
@@ -213,7 +213,7 @@ func (c *Connection) reconnectLoop(uri string) {
 		notifyConnectionLost(c.options.notificationChannel)
 		if err := c.connect(uri, newReady); err != nil {
 			// Only exit for expected terminal conditions; any other error keeps retrying.
-			if errors.Is(err, errConnectionClosedByUser) || errors.Is(err, errMaxReconnectAttemptsReached) {
+			if errors.Is(err, ErrConnectionClosedByUser) || errors.Is(err, ErrMaxReconnectAttemptsReached) {
 				return
 			}
 		}
@@ -272,7 +272,7 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 
 		select {
 		case <-c.done:
-			return nil, errConnectionClosedByUser
+			return nil, ErrConnectionClosedByUser
 		case <-st.ready:
 		}
 
@@ -292,7 +292,7 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 			select {
 			case <-c.done:
 				ch.Close()
-				return nil, errConnectionClosedByUser
+				return nil, ErrConnectionClosedByUser
 			default:
 			}
 			notifyChannelEstablished(c.options.notificationChannel, source)
@@ -310,7 +310,7 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 			select {
 			case <-c.done:
 				t.Stop()
-				return nil, errConnectionClosedByUser
+				return nil, ErrConnectionClosedByUser
 			case <-t.C:
 			}
 		} else {
@@ -319,7 +319,7 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 			freshSt := c.state.Load()
 			select {
 			case <-c.done:
-				return nil, errConnectionClosedByUser
+				return nil, ErrConnectionClosedByUser
 			case <-freshSt.ready:
 			}
 		}
