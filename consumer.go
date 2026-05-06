@@ -24,7 +24,7 @@ type Consumer struct {
 // If no QoS is supplied the prefetch count will be of 20.
 func (c *Connection) NewConsumer(
 	queueName string,
-	opts ...func(*consumerOption)) Consumer {
+	opts ...func(*consumerOption)) *Consumer {
 
 	options := consumerOption{
 		notificationCh: c.options.notificationChannel,
@@ -36,7 +36,7 @@ func (c *Connection) NewConsumer(
 		opt(&options)
 	}
 
-	return Consumer{
+	return &Consumer{
 		queueName: queueName,
 		options:   options,
 		getNewChannel: func() (*amqp.Channel, error) {
