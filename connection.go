@@ -55,9 +55,11 @@ func WithCloseTimeout(d time.Duration) func(*connectionOption) {
 	}
 }
 
-// WithMaxReconnectAttempts limits the total number of dial retries across
-// all reconnect cycles. When n > 0 and the limit is reached,
-// getNewChannel returns ErrMaxReconnectAttemptsReached and the loop exits.
+// WithMaxReconnectAttempts limits the number of consecutive dial retries during a
+// single outage. When n > 0 and n consecutive attempts fail, connect returns
+// ErrMaxReconnectAttemptsReached and the reconnect loop exits. The counter resets
+// to zero after each successful connection, so a connection that flaps repeatedly
+// does not accumulate toward the limit across separate outage windows.
 func WithMaxReconnectAttempts(n int) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.maxReconnectAttempts = n
