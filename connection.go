@@ -2,6 +2,7 @@ package bunnify
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -140,6 +141,16 @@ func (c *Connection) Start() error {
 	return nil
 }
 
+// jitter returns d ± 25% to spread reconnect attempts across a fleet and avoid
+// a thundering-herd storm on the broker after a blip.
+func jitter(d time.Duration) time.Duration {
+	delta := time.Duration(rand.Int63n(int64(d) / 2)) // 0 to 50% of d
+	if rand.Intn(2) == 0 {
+		return d - delta/2 // subtract up to 25%
+	}
+	return d + delta/2 // add up to 25%
+}
+
 // connect dials the broker, retrying on failure until success or until the user
 // calls Close. ready is the channel the caller owns and expects connect() to close
 // once a live connection is stored — passing it explicitly avoids any risk of
@@ -148,7 +159,6 @@ func (c *Connection) Start() error {
 // Issue #7: the ticker is created only after the first failure so the very first
 // dial attempt is immediate.
 func (c *Connection) connect(uri string, ready chan struct{}) error {
-	var ticker *time.Ticker
 	var attempts int
 
 	for {
@@ -188,17 +198,15 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 
 		notifyConnectionFailed(c.options.notificationChannel, err)
 
-		// Create the ticker lazily so the very first retry is after one interval,
-		// not penalising the initial dial attempt.
-		if ticker == nil {
-			ticker = time.NewTicker(c.options.reconnectInterval)
-			defer ticker.Stop()
-		}
-
+		// Use a per-iteration Timer (not a Ticker) with jitter so each reconnect
+		// waits exactly one jittered interval from the previous attempt — this
+		// prevents tick queuing (H7) and spreads fleet reconnects (H6).
+		t := time.NewTimer(jitter(c.options.reconnectInterval))
 		select {
 		case <-c.done:
+			t.Stop()
 			return ErrConnectionClosedByUser
-		case <-ticker.C:
+		case <-t.C:
 		}
 	}
 }
