@@ -46,7 +46,7 @@ func (p *Publisher) Publish(
 
 	ch, err := p.getNewChannel()
 	if err != nil {
-		return fmt.Errorf("connection closed by system, channel will not reconnect: %w", err)
+		return fmt.Errorf("could not obtain channel: %w", err)
 	}
 	defer ch.Close()
 
