@@ -204,7 +204,7 @@ func (c *Connection) reconnectLoop(uri string) {
 		// Create the new ready before storing so getNewChannel callers immediately
 		// block on it rather than spinning on Channel() calls against the dead conn.
 		newReady := make(chan struct{})
-		c.state.Store(&connState{conn: st.conn, ready: newReady})
+		c.state.Store(&connState{conn: nil, ready: newReady})
 
 		select {
 		case <-c.done:
