@@ -12,7 +12,7 @@ type Consumer struct {
 	queueName     string
 	initialized   bool
 	options       consumerOption
-	getNewChannel func() (*amqp.Channel, bool)
+	getNewChannel func() (*amqp.Channel, error)
 }
 
 // NewConsumer creates a consumer for a given queue using the specified connection.
@@ -36,7 +36,7 @@ func (c *Connection) NewConsumer(
 	return Consumer{
 		queueName: queueName,
 		options:   options,
-		getNewChannel: func() (*amqp.Channel, bool) {
+		getNewChannel: func() (*amqp.Channel, error) {
 			return c.getNewChannel(NotificationSourceConsumer)
 		},
 	}
@@ -71,9 +71,9 @@ func (c *Consumer) ConsumeParallel() error {
 }
 
 func (c *Consumer) consume(parallel bool) error {
-	channel, connectionClosed := c.getNewChannel()
-	if connectionClosed {
-		return errConnectionClosedByUser
+	channel, err := c.getNewChannel()
+	if err != nil {
+		return err
 	}
 
 	// If obtained channel is closed, try again

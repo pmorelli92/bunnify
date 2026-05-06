@@ -2,7 +2,6 @@ package bunnify
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -19,7 +18,7 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 	}
 
 	err := c.Consume()
-	if errors.Is(err, errConnectionClosedByUser) {
+	if isTerminalConnError(err) {
 		return
 	}
 
@@ -39,7 +38,7 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 	}
 
 	err := c.ConsumeParallel()
-	if errors.Is(err, errConnectionClosedByUser) {
+	if isTerminalConnError(err) {
 		return
 	}
 

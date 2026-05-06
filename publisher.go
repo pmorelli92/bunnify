@@ -13,13 +13,13 @@ import (
 type Publisher struct {
 	mu            sync.Mutex
 	inUseChannel  *amqp.Channel
-	getNewChannel func() (*amqp.Channel, bool)
+	getNewChannel func() (*amqp.Channel, error)
 }
 
 // NewPublisher creates a publisher using the specified connection.
 func (c *Connection) NewPublisher() *Publisher {
 	return &Publisher{
-		getNewChannel: func() (*amqp.Channel, bool) {
+		getNewChannel: func() (*amqp.Channel, error) {
 			return c.getNewChannel(NotificationSourcePublisher)
 		},
 	}
@@ -50,9 +50,9 @@ func (p *Publisher) Publish(
 	defer p.mu.Unlock()
 
 	if p.inUseChannel == nil || p.inUseChannel.IsClosed() {
-		channel, connectionClosed := p.getNewChannel()
-		if connectionClosed {
-			return fmt.Errorf("connection closed by system, channel will not reconnect")
+		channel, err := p.getNewChannel()
+		if err != nil {
+			return fmt.Errorf("connection closed by system, channel will not reconnect: %w", err)
 		}
 		p.inUseChannel = channel
 	}

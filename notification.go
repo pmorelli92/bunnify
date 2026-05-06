@@ -27,102 +27,92 @@ func (n Notification) String() string {
 	return fmt.Sprintf("[%s][%s] %s", n.Type, n.Source, n.Message)
 }
 
-func notifyConnectionEstablished(ch chan<- Notification) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeInfo,
-			Message: "established connection to server",
-			Source:  NotificationSourceConnection,
-		}
+func send(ch chan<- Notification, n Notification) {
+	if ch == nil {
+		return
 	}
+	select {
+	case ch <- n:
+	default:
+	}
+}
+
+func notifyConnectionEstablished(ch chan<- Notification) {
+	send(ch, Notification{
+		Type:    NotificationTypeInfo,
+		Message: "established connection to server",
+		Source:  NotificationSourceConnection,
+	})
 }
 
 func notifyConnectionLost(ch chan<- Notification) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: "lost connection to server, will attempt to reconnect",
-			Source:  NotificationSourceConnection,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: "lost connection to server, will attempt to reconnect",
+		Source:  NotificationSourceConnection,
+	})
 }
 
 func notifyConnectionFailed(ch chan<- Notification, err error) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: fmt.Sprintf("failed to connect to server, error %s", err),
-			Source:  NotificationSourceConnection,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: fmt.Sprintf("failed to connect to server, error %s", err),
+		Source:  NotificationSourceConnection,
+	})
 }
 
 func notifyClosingConnection(ch chan<- Notification) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeInfo,
-			Message: "closing connection to server",
-			Source:  NotificationSourceConnection,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeInfo,
+		Message: "closing connection to server",
+		Source:  NotificationSourceConnection,
+	})
 }
 
 func notifyChannelEstablished(ch chan<- Notification, source NotificationSource) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeInfo,
-			Message: "established connection to channel",
-			Source:  source,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeInfo,
+		Message: "established connection to channel",
+		Source:  source,
+	})
 }
 
 func notifyChannelLost(ch chan<- Notification, source NotificationSource) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: "lost connection to channel, will attempt to reconnect",
-			Source:  source,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: "lost connection to channel, will attempt to reconnect",
+		Source:  source,
+	})
 }
 
 func notifyChannelFailed(ch chan<- Notification, source NotificationSource, err error) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: fmt.Sprintf("failed to connect to channel, error %s", err),
-			Source:  source,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: fmt.Sprintf("failed to connect to channel, error %s", err),
+		Source:  source,
+	})
 }
 
 func notifyEventHandlerNotFound(ch chan<- Notification, routingKey string) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: fmt.Sprintf("event handler for %s was not found", routingKey),
-			Source:  NotificationSourceConsumer,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: fmt.Sprintf("event handler for %s was not found", routingKey),
+		Source:  NotificationSourceConsumer,
+	})
 }
 
 func notifyEventHandlerSucceed(ch chan<- Notification, routingKey string, took int64) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeInfo,
-			Message: fmt.Sprintf("event handler for %s succeeded, took %d milliseconds", routingKey, took),
-			Source:  NotificationSourceConsumer,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeInfo,
+		Message: fmt.Sprintf("event handler for %s succeeded, took %d milliseconds", routingKey, took),
+		Source:  NotificationSourceConsumer,
+	})
 }
 
 func notifyEventHandlerFailed(ch chan<- Notification, routingKey string, took int64, err error) {
-	if ch != nil {
-		ch <- Notification{
-			Type:    NotificationTypeError,
-			Message: fmt.Sprintf("event handler for %s failed, took %d milliseconds, error: %s", routingKey, took, err),
-			Source:  NotificationSourceConsumer,
-		}
-	}
+	send(ch, Notification{
+		Type:    NotificationTypeError,
+		Message: fmt.Sprintf("event handler for %s failed, took %d milliseconds, error: %s", routingKey, took, err),
+		Source:  NotificationSourceConsumer,
+	})
 }
