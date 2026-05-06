@@ -284,6 +284,12 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 		st = c.state.Load()
 
 		if st.conn == nil {
+			// State not yet populated — wait for the next ready signal
+			select {
+			case <-c.done:
+				return nil, ErrConnectionClosedByUser
+			case <-st.ready:
+			}
 			continue
 		}
 
