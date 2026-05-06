@@ -197,7 +197,7 @@ func (c *Connection) reconnectLoop(uri string) {
 	defer c.wg.Done()
 	for {
 		st := c.state.Load()
-		<-st.conn.NotifyClose(make(chan *amqp.Error))
+		<-st.conn.NotifyClose(make(chan *amqp.Error, 1))
 
 		// Create the new ready before storing so getNewChannel callers immediately
 		// block on it rather than spinning on Channel() calls against the dead conn.
