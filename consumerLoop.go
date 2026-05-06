@@ -34,10 +34,17 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 
 func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, c.options.maxParallelHandlers)
 	for delivery := range deliveries {
+		if c.options.maxParallelHandlers > 0 {
+			sem <- struct{}{} // acquire
+		}
 		wg.Add(1)
 		go func(d amqp.Delivery) {
 			defer wg.Done()
+			if c.options.maxParallelHandlers > 0 {
+				defer func() { <-sem }() // release
+			}
 			c.handle(d)
 		}(delivery)
 	}

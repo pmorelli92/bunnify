@@ -5,15 +5,16 @@ import (
 )
 
 type consumerOption struct {
-	deadLetterQueue string
-	exchange        string
-	defaultHandler  wrappedHandler
-	handlers        map[string]wrappedHandler
-	prefetchCount   int
-	prefetchSize    int
-	quorumQueue     bool
-	notificationCh  chan<- Notification
-	retries         int
+	deadLetterQueue     string
+	exchange            string
+	defaultHandler      wrappedHandler
+	handlers            map[string]wrappedHandler
+	prefetchCount       int
+	prefetchSize        int
+	quorumQueue         bool
+	notificationCh      chan<- Notification
+	retries             int
+	maxParallelHandlers int
 }
 
 // WithBindingToExchange specifies the exchange on which the queue
@@ -72,5 +73,15 @@ func WithDefaultHandler(handler EventHandler[json.RawMessage]) func(*consumerOpt
 func WithHandler[T any](routingKey string, handler EventHandler[T]) func(*consumerOption) {
 	return func(opt *consumerOption) {
 		opt.handlers[routingKey] = newWrappedHandler(handler)
+	}
+}
+
+// WithMaxParallelHandlers sets an upper bound on the number of handler goroutines
+// that ConsumeParallel will run concurrently. When n goroutines are already running,
+// the loop blocks until one finishes before spawning the next.
+// A value of 0 (the default) means no limit — existing behaviour is preserved.
+func WithMaxParallelHandlers(n int) func(*consumerOption) {
+	return func(opt *consumerOption) {
+		opt.maxParallelHandlers = n
 	}
 }
