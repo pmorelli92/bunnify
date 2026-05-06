@@ -2,6 +2,7 @@ package bunnify
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -147,15 +148,12 @@ func (c *Connection) Start() error {
 
 	uri, err := amqp.ParseURI(c.options.uri)
 	if err != nil {
-		// Unblock any getNewChannel callers that were issued before Start returned.
-		c.closeOnce.Do(func() { close(c.done) })
-		return err
+		return fmt.Errorf("invalid AMQP URI: %w", err)
 	}
 
 	// Pass the initial ready channel so connect() owns exactly which channel to close.
 	initialReady := c.state.Load().ready
 	if err := c.connect(uri.String(), initialReady); err != nil {
-		c.closeOnce.Do(func() { close(c.done) })
 		return err
 	}
 
