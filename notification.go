@@ -1,6 +1,9 @@
 package bunnify
 
-import "fmt"
+import (
+	"fmt"
+	"sync/atomic"
+)
 
 type NotificationSource string
 
@@ -27,6 +30,12 @@ func (n Notification) String() string {
 	return fmt.Sprintf("[%s][%s] %s", n.Type, n.Source, n.Message)
 }
 
+var droppedNotifications atomic.Uint64
+
+func DroppedNotifications() uint64 {
+	return droppedNotifications.Load()
+}
+
 func send(ch chan<- Notification, n Notification) {
 	if ch == nil {
 		return
@@ -34,6 +43,7 @@ func send(ch chan<- Notification, n Notification) {
 	select {
 	case ch <- n:
 	default:
+		droppedNotifications.Add(1)
 	}
 }
 
