@@ -38,8 +38,9 @@ func (p *Publisher) Publish(
 	}
 
 	publishing := amqp.Publishing{
-		ContentEncoding: "application/json",
-		CorrelationId:   event.CorrelationID,
+		ContentType:   "application/json",
+		DeliveryMode:  amqp.Persistent,
+		CorrelationId: event.CorrelationID,
 		MessageId:       event.ID,
 		Timestamp:       event.Timestamp,
 		Body:            b,
