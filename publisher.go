@@ -50,7 +50,19 @@ func (p *Publisher) Publish(
 	}
 	defer ch.Close()
 
-	err = ch.PublishWithContext(ctx, exchange, routingKey, true, false, publishing)
+	// Detect mid-publish channel death and surface it to the caller
+	closeCh := ch.NotifyClose(make(chan *amqp.Error, 1))
+	publishCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go func() {
+		select {
+		case <-closeCh:
+			cancel()
+		case <-publishCtx.Done():
+		}
+	}()
+
+	err = ch.PublishWithContext(publishCtx, exchange, routingKey, true, false, publishing)
 	if err != nil {
 		eventPublishFailed(exchange, routingKey)
 		return err
