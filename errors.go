@@ -2,4 +2,4 @@ package bunnify
 
 import "errors"
 
-var errConnectionClosedByUser = errors.New("connection is already closed by system")
+var errConnectionClosedByUser = errors.New("connection is already closed by user")
