@@ -11,12 +11,14 @@ import (
 )
 
 type connectionOption struct {
-	uri                    string
-	reconnectInterval      time.Duration
-	channelRetryInterval   time.Duration
-	closeTimeout           time.Duration
-	maxReconnectAttempts   int
-	notificationChannel    chan<- Notification
+	uri                  string
+	reconnectInterval    time.Duration
+	channelRetryInterval time.Duration
+	closeTimeout         time.Duration
+	dialTimeout          time.Duration
+	heartbeat            time.Duration
+	maxReconnectAttempts int
+	notificationChannel  chan<- Notification
 }
 
 // WithURI allows the consumer to specify the AMQP Server.
@@ -62,6 +64,23 @@ func WithMaxReconnectAttempts(n int) func(*connectionOption) {
 	}
 }
 
+// WithDialTimeout sets the maximum time allowed for a single TCP dial attempt
+// to the broker. If the dial does not complete within this duration the attempt
+// is aborted and the reconnect loop retries. Defaults to 5s.
+func WithDialTimeout(d time.Duration) func(*connectionOption) {
+	return func(opt *connectionOption) {
+		opt.dialTimeout = d
+	}
+}
+
+// WithHeartbeat sets the AMQP heartbeat interval negotiated with the broker.
+// A dead network is detected within approximately 2× this value. Defaults to 5s.
+func WithHeartbeat(d time.Duration) func(*connectionOption) {
+	return func(opt *connectionOption) {
+		opt.heartbeat = d
+	}
+}
+
 // WithNotificationChannel specifies a go channel to receive messages
 // such as connection established, reconnecting, event published, consumed, etc.
 func WithNotificationChannel(notificationCh chan<- Notification) func(*connectionOption) {
@@ -98,6 +117,8 @@ func NewConnection(opts ...func(*connectionOption)) *Connection {
 		reconnectInterval:    10 * time.Second,
 		channelRetryInterval: 500 * time.Millisecond,
 		closeTimeout:         5 * time.Second,
+		dialTimeout:          5 * time.Second,
+		heartbeat:            5 * time.Second,
 		uri:                  "amqp://localhost:5672",
 	}
 	for _, opt := range opts {
@@ -168,7 +189,10 @@ func (c *Connection) connect(uri string, ready chan struct{}) error {
 		default:
 		}
 
-		conn, err := amqp.Dial(uri)
+		conn, err := amqp.DialConfig(uri, amqp.Config{
+				Heartbeat: c.options.heartbeat,
+				Dial:      amqp.DefaultDial(c.options.dialTimeout),
+			})
 		if err == nil {
 			// Fix C8: check done before storing conn and unblocking waiters.
 			// The conn is dialled but not yet visible to anyone, so closing it
