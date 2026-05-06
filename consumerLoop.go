@@ -9,6 +9,13 @@ import (
 )
 
 func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
+	closeCh := channel.NotifyClose(make(chan *amqp.Error, 1))
+	go func() {
+		if _, ok := <-closeCh; ok {
+			channel.Close()
+		}
+	}()
+
 	for delivery := range deliveries {
 		c.handle(delivery)
 	}
@@ -34,6 +41,13 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 }
 
 func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
+	closeCh := channel.NotifyClose(make(chan *amqp.Error, 1))
+	go func() {
+		if _, ok := <-closeCh; ok {
+			channel.Close()
+		}
+	}()
+
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, c.options.maxParallelHandlers)
 	for delivery := range deliveries {
