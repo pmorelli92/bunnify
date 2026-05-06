@@ -18,6 +18,7 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 		channel.Close()
 	}
 
+	c.initialized = false
 	err := c.Consume()
 	// c.Consume() calls c.wg.Add(1) before launching the successor goroutine,
 	// so Done() here pairs with the Add(1) that launched this goroutine.
@@ -54,6 +55,7 @@ func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.De
 		channel.Close()
 	}
 
+	c.initialized = false
 	err := c.ConsumeParallel()
 	// c.ConsumeParallel() calls c.wg.Add(1) before launching the successor goroutine,
 	// so Done() here pairs with the Add(1) that launched this goroutine.
