@@ -2,6 +2,7 @@ package bunnify
 
 import (
 	"encoding/json"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -29,9 +30,15 @@ func (c *Consumer) loop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) 
 }
 
 func (c *Consumer) parallelLoop(channel *amqp.Channel, deliveries <-chan amqp.Delivery) {
+	var wg sync.WaitGroup
 	for delivery := range deliveries {
-		go c.handle(delivery)
+		wg.Add(1)
+		go func(d amqp.Delivery) {
+			defer wg.Done()
+			c.handle(d)
+		}(delivery)
 	}
+	wg.Wait()
 
 	if !channel.IsClosed() {
 		channel.Close()
@@ -56,7 +63,9 @@ func (c *Consumer) handle(delivery amqp.Delivery) {
 	handler, ok := c.options.handlers[deliveryInfo.RoutingKey]
 	if !ok {
 		if c.options.defaultHandler == nil {
-			_ = delivery.Nack(false, false)
+			if err := delivery.Nack(false, false); err != nil {
+				notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
+			}
 			notifyEventHandlerNotFound(c.options.notificationCh, deliveryInfo.RoutingKey)
 			eventWithoutHandler(c.queueName, deliveryInfo.RoutingKey)
 			return
@@ -68,7 +77,9 @@ func (c *Consumer) handle(delivery amqp.Delivery) {
 
 	// For this error to happen an event not published by Bunnify is required
 	if err := json.Unmarshal(delivery.Body, &uevt); err != nil {
-		_ = delivery.Nack(false, false)
+		if nackErr := delivery.Nack(false, false); nackErr != nil {
+			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, nackErr)
+		}
 		eventNotParsable(c.queueName, deliveryInfo.RoutingKey)
 		return
 	}
@@ -77,14 +88,19 @@ func (c *Consumer) handle(delivery amqp.Delivery) {
 	if err := handler(tracingCtx, uevt); err != nil {
 		elapsed := time.Since(startTime).Milliseconds()
 		notifyEventHandlerFailed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed, err)
-		_ = delivery.Nack(false, c.shouldRetry(delivery.Headers))
+		if nackErr := delivery.Nack(false, c.shouldRetry(delivery.Headers)); nackErr != nil {
+			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, nackErr)
+		}
 		eventNack(c.queueName, deliveryInfo.RoutingKey, elapsed)
 		return
 	}
 
 	elapsed := time.Since(startTime).Milliseconds()
+	if err := delivery.Ack(false); err != nil {
+		notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, err)
+		return
+	}
 	notifyEventHandlerSucceed(c.options.notificationCh, deliveryInfo.RoutingKey, elapsed)
-	_ = delivery.Ack(false)
 	eventAck(c.queueName, deliveryInfo.RoutingKey, elapsed)
 }
 
