@@ -133,10 +133,17 @@ func (c *Consumer) shouldRetry(headers amqp.Table) bool {
 	if !ok {
 		count, ok = headers["x-delivery-count"]
 	}
-	if !ok {
-		return true
-	}
 
-	r, _ := count.(int64)
+	var r int64
+	if ok {
+		switch v := count.(type) {
+		case int64:
+			r = v
+		case int32:
+			r = int64(v)
+		case int:
+			r = int64(v)
+		}
+	}
 	return c.options.retries > int(r)
 }
