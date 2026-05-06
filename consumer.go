@@ -3,6 +3,7 @@ package bunnify
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -71,14 +72,22 @@ func (c *Consumer) ConsumeParallel() error {
 }
 
 func (c *Consumer) consume(parallel bool) error {
-	channel, err := c.getNewChannel()
-	if err != nil {
-		return err
-	}
+	var channel *amqp.Channel
+	for {
+		var err error
+		channel, err = c.getNewChannel()
+		if err != nil {
+			return err
+		}
 
-	// If obtained channel is closed, try again
-	if channel.IsClosed() {
-		return c.consume(parallel)
+		// If obtained channel is closed, notify and retry iteratively
+		if channel.IsClosed() {
+			notifyChannelFailed(c.options.notificationCh, NotificationSourceConsumer, fmt.Errorf("channel obtained but immediately closed"))
+			time.Sleep(time.Second)
+			continue
+		}
+
+		break
 	}
 
 	if !c.initialized {
