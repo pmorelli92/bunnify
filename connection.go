@@ -12,6 +12,7 @@ import (
 type connectionOption struct {
 	uri                    string
 	reconnectInterval      time.Duration
+	channelRetryInterval   time.Duration
 	closeTimeout           time.Duration
 	maxReconnectAttempts   int
 	notificationChannel    chan<- Notification
@@ -30,6 +31,16 @@ func WithURI(URI string) func(*connectionOption) {
 func WithReconnectInterval(interval time.Duration) func(*connectionOption) {
 	return func(opt *connectionOption) {
 		opt.reconnectInterval = interval
+	}
+}
+
+// WithChannelRetryInterval sets how long getNewChannel waits before retrying
+// after a transient channel creation failure (e.g. max channels reached,
+// server-side throttle) while the connection is still alive.
+// Defaults to 500ms.
+func WithChannelRetryInterval(d time.Duration) func(*connectionOption) {
+	return func(opt *connectionOption) {
+		opt.channelRetryInterval = d
 	}
 }
 
@@ -83,9 +94,10 @@ type Connection struct {
 // connect to a localhost instance on and try to reconnect every 10 seconds.
 func NewConnection(opts ...func(*connectionOption)) *Connection {
 	options := connectionOption{
-		reconnectInterval: 10 * time.Second,
-		closeTimeout:      5 * time.Second,
-		uri:               "amqp://localhost:5672",
+		reconnectInterval:    10 * time.Second,
+		channelRetryInterval: 500 * time.Millisecond,
+		closeTimeout:         5 * time.Second,
+		uri:                  "amqp://localhost:5672",
 	}
 	for _, opt := range opts {
 		opt(&options)
@@ -314,7 +326,7 @@ func (c *Connection) getNewChannel(source NotificationSource) (*amqp.Channel, er
 			//
 			// Issue #8/#9: use NewTimer instead of time.After to stop and drain
 			// promptly when done fires.
-			t := time.NewTimer(c.options.reconnectInterval)
+			t := time.NewTimer(c.options.channelRetryInterval)
 			select {
 			case <-c.done:
 				t.Stop()
