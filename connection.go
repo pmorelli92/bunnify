@@ -307,6 +307,9 @@ func (c *Connection) Close() error {
 	select {
 	case <-waitDone:
 	case <-timer.C:
+		if err == nil {
+			err = ErrCloseTimedOut
+		}
 	}
 
 	return err
